@@ -70,7 +70,9 @@ export default function Home() {
   }, [supabase]);
 
   useEffect(() => {
-    fetchPending();
+    queueMicrotask(() => {
+      void fetchPending();
+    });
   }, [fetchPending]);
 
   const approveAndSync = async (row: DealQueueRecord) => {
