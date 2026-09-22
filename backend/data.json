@@ -1,0 +1,26 @@
+{
+  "lenders": [
+    {
+      "name": "Apollo Credit",
+      "min_ebitda": 10000000,
+      "max_leverage": 4.5,
+      "allowed_geography": ["USA", "Canada"],
+      "qualitative_exclusion": "Turnaround deals or distressed assets."
+    },
+    {
+      "name": "Oak Hill",
+      "min_ebitda": 5000000,
+      "max_leverage": 3.0,
+      "allowed_geography": ["UK", "USA"],
+      "qualitative_exclusion": "Startups without 3 years of audited financials."
+    }
+  ],
+  "incoming_deal": {
+    "deal_id": "D99",
+    "target_name": "HealthTech Solutions",
+    "ebitda": 12000000,
+    "leverage": 2.5,
+    "geography": "USA",
+    "context_text": "Strong cash flow, but undergoing a turnaround strategy after recent executive departures."
+  }
+}
