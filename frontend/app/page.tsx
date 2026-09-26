@@ -73,16 +73,21 @@ export default function IndentureCommandCenter() {
     filter === "ALL" ? true : (d.human_status || "PENDING") === filter
   );
 
-  const getStatusConfig = (decision: string) => {
+  const getStatusColor = (decision: string) => {
     switch(decision?.toUpperCase()) {
-      case "REJECT": 
-        return { bg: "bg-rose-950/40", border: "border-rose-800/60", text: "text-rose-400", icon: XCircle };
-      case "HOLD_MISSING_DATA": 
-        return { bg: "bg-amber-950/40", border: "border-amber-800/60", text: "text-amber-400", icon: AlertCircle };
-      case "APPROVE": 
-        return { bg: "bg-emerald-950/40", border: "border-emerald-800/60", text: "text-emerald-400", icon: CheckCircle2 };
-      default: 
-        return { bg: "bg-zinc-900/40", border: "border-zinc-700/60", text: "text-zinc-400", icon: Activity };
+      case "REJECT": return "text-rose-500";
+      case "HOLD_MISSING_DATA": return "text-amber-500";
+      case "APPROVE": return "text-emerald-500";
+      default: return "text-zinc-500";
+    }
+  };
+
+  const getStatusLabel = (decision: string) => {
+    switch(decision?.toUpperCase()) {
+      case "REJECT": return "REJECT";
+      case "HOLD_MISSING_DATA": return "HOLD";
+      case "APPROVE": return "APPROVE";
+      default: return decision || "UNKNOWN";
     }
   };
 
@@ -172,26 +177,25 @@ export default function IndentureCommandCenter() {
             </div>
           ) : (
             filteredDeals.map(deal => {
-              const status = getStatusConfig(deal.ai_decision);
-              const StatusIcon = status.icon;
+              const statusColor = getStatusColor(deal.ai_decision);
+              const statusLabel = getStatusLabel(deal.ai_decision);
               const isSelected = selectedDeal?.id === deal.id;
               
               return (
                 <div 
                   key={deal.id}
                   onClick={() => setSelectedDeal(deal)}
-                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 border ${
+                  className={`p-4 rounded-lg cursor-pointer transition-all duration-200 bg-[#0B0C10] border border-zinc-800 ${
                     isSelected 
-                      ? "bg-[#0B0C10] border-zinc-700 shadow-lg shadow-black/50" 
-                      : "bg-[#07080B] border-white/[0.04] hover:bg-zinc-900/40 hover:border-zinc-700/50"
+                      ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10" 
+                      : "hover:border-zinc-700 hover:bg-zinc-900/50"
                   }`}
                 >
-                  <div className="flex justify-between items-start mb-3">
+                  <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-zinc-100 truncate pr-2">{deal.deal_name || "Unknown Deal"}</h3>
-                    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${status.bg} ${status.border} ${status.text}`}>
-                      <StatusIcon className="w-3 h-3" />
-                      {deal.ai_decision}
-                    </div>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${statusColor}`}>
+                      {statusLabel}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
                     <Briefcase className="w-3.5 h-3.5" />
