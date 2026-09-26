@@ -207,78 +207,51 @@ export default function IndentureCommandCenter() {
           )}
         </div>
 
-        {/* RIGHT PANE - INSPECTOR */}
-        <div className="col-span-8 bg-[#0B0C10] overflow-y-auto p-8 relative">
+{/* RIGHT PANE - INSPECTOR */}
+        <div className="col-span-8 bg-[#0B0C10] overflow-y-auto p-8">
           {!selectedDeal ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-600">
+            <div className="h-full flex flex-col items-center justify-center text-zinc-600">
               <Activity className="w-12 h-12 mb-4 opacity-20" />
               <p>Select a deal from the queue to inspect</p>
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto space-y-8 pb-20">
-              
+            <div className="max-w-4xl mx-auto space-y-6">
               {/* Deal Header */}
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-zinc-500 font-mono text-xs">ID: {selectedDeal.id}</span>
-                  <ChevronRight className="w-3 h-3 text-zinc-700" />
-                  <span className="text-zinc-500 font-mono text-xs">Live Triage</span>
-                </div>
-                <h2 className="text-3xl font-bold text-white mb-6">{selectedDeal.deal_name}</h2>
-                
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-[#07080B] border border-white/[0.04] p-4 rounded-lg">
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Target Lender</p>
-                    <p className="font-mono text-sm text-zinc-200">{selectedDeal.lender_name}</p>
-                  </div>
-                  <div className="bg-[#07080B] border border-white/[0.04] p-4 rounded-lg">
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Human Status</p>
-                    <p className="font-mono text-sm text-zinc-200">{selectedDeal.human_status || "PENDING"}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Evidence Box */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-indigo-400" />
-                  AI Qualitative Evidence
-                </h3>
-                <div className="bg-[#07080B] border border-indigo-900/30 p-5 rounded-xl font-mono text-sm leading-relaxed text-indigo-200/80 shadow-inner">
+              <h2 className="text-3xl font-bold text-white">{selectedDeal.deal_name}</h2>
+              
+              {/* AI Evidence */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">AI Evidence</h3>
+                <div className="bg-zinc-900/50 p-4 rounded-lg font-mono text-sm text-zinc-300 whitespace-pre-wrap border border-zinc-800">
                   {selectedDeal.evidence || "No evidence recorded."}
                 </div>
               </div>
-
-              {/* Email Draft Box */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-emerald-400" />
-                  Generated Outreach Draft
-                </h3>
-                <div className="bg-[#07080B] border border-white/[0.04] p-5 rounded-xl font-mono text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap shadow-inner relative group">
+              
+              {/* Email Draft */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider">Email Draft</h3>
+                <div className="bg-zinc-900/50 p-4 rounded-lg font-mono text-sm text-zinc-300 whitespace-pre-wrap border border-zinc-800">
                   {selectedDeal.email_draft || "No draft generated."}
                 </div>
               </div>
-
-              {/* Action Footer */}
+              
+              {/* Action Buttons */}
               {selectedDeal.human_status === "PENDING" && (
-                <div className="fixed bottom-0 right-0 w-2/3 p-6 bg-gradient-to-t from-[#0B0C10] via-[#0B0C10] to-transparent">
-                  <div className="flex gap-4 justify-end max-w-4xl mx-auto">
-                    <button 
-                      onClick={() => handleOptimisticAction(selectedDeal.id, "REJECTED")}
-                      className="px-6 py-3 rounded-lg bg-[#07080B] border border-rose-900/50 text-rose-400 font-semibold hover:bg-rose-950/40 transition-all flex items-center gap-2"
-                    >
-                      <Archive className="w-4 h-4" />
-                      Reject & Archive
-                    </button>
-                    <button 
-                      onClick={() => handleOptimisticAction(selectedDeal.id, "APPROVED")}
-                      className="px-6 py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/20 flex items-center gap-2"
-                    >
-                      <Send className="w-4 h-4" />
-                      Approve & Sync to CRM
-                    </button>
-                  </div>
+                <div className="flex gap-4 pt-4 border-t border-zinc-800">
+                  <button 
+                    onClick={() => handleOptimisticAction(selectedDeal.id, "REJECTED")}
+                    className="flex-1 px-6 py-3 rounded-lg bg-transparent border-2 border-rose-500 text-rose-400 font-semibold hover:bg-rose-950/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Archive className="w-4 h-4" />
+                    Reject & Archive
+                  </button>
+                  <button 
+                    onClick={() => handleOptimisticAction(selectedDeal.id, "APPROVED")}
+                    className="flex-1 px-6 py-3 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Approve & Sync
+                  </button>
                 </div>
               )}
             </div>
