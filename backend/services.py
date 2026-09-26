@@ -34,16 +34,25 @@ def evaluate_qualitative_fit(deal: dict, lender: dict) -> DealEvaluation:
         "decision must be one of ADVANCE, HOLD_MISSING_DATA, REJECT."
     )
 
-    completion = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
-        response_format={"type": "json_object"},
-    )
+    models = ["openai/gpt-oss-20b", "llama-3.1-8b-instant"]
+    last_error = None
 
-    content = completion.choices[0].message.content or "{}"
-    payload = json.loads(content)
-    return DealEvaluation.model_validate(payload)
+    for model in models:
+        try:
+            completion = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                response_format={"type": "json_object"},
+            )
+            content = completion.choices[0].message.content or "{}"
+            payload = json.loads(content)
+            return DealEvaluation.model_validate(payload)
+        except Exception as e:
+            last_error = e
+            continue
+
+    raise RuntimeError(f"All Groq models failed. Last error: {last_error}")
 
 
 def push_to_crm(deal_name: str, status: str) -> dict:

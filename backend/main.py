@@ -80,6 +80,7 @@ def evaluate_deal_webhook() -> dict:
             "ai_decision": evaluation.decision.value,
             "evidence": evaluation.evidence,
             "email_draft": evaluation.email_draft,
+            "human_status": "PENDING",
         }
         supabase.table("deal_queue").insert(record).execute()
         results.append(record)
