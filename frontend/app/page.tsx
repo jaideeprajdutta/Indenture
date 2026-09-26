@@ -26,19 +26,38 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
 
   const supabase = useMemo(() => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
     if (!url || !key) {
+      setConfigError("Missing Database Credentials: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local");
+      console.error("Missing Supabase credentials:", { url: !!url, key: !!key });
       return null;
     }
+
+    try {
+      new URL(url);
+    } catch {
+      setConfigError("Invalid Supabase URL: Must be a valid HTTP or HTTPS URL");
+      console.error("Invalid Supabase URL:", url);
+      return null;
+    }
+
+    if (!url.startsWith("https://") || !url.endsWith(".supabase.co")) {
+      setConfigError("Invalid Supabase URL: Must start with https:// and end with .supabase.co");
+      console.error("Invalid Supabase URL format:", url);
+      return null;
+    }
+
     return createClient(url, key);
   }, []);
 
   const fetchPending = useCallback(async () => {
-    if (!supabase) {
-      setError("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+    if (!supabase || configError) {
+      setError("Missing or invalid Supabase configuration. Check console for details.");
       setIsLoading(false);
       return;
     }
@@ -115,6 +134,15 @@ export default function Home() {
         <h1 className="text-2xl font-semibold text-slate-900">
           Indenture HITL Triage Desk
         </h1>
+        {configError && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <p className="font-semibold">Configuration Error</p>
+            <p className="mt-1">{configError}</p>
+            <p className="mt-2 text-xs text-amber-700">
+              Please update <code className="bg-amber-100 px-1 rounded">frontend/.env.local</code> with valid Supabase credentials.
+            </p>
+          </div>
+        )}
         {error && (
           <p className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             {error}
