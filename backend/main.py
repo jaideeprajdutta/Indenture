@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -27,15 +28,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_supabase_client: Client | None = None
+
 
 def get_supabase_client() -> Client:
+    global _supabase_client
+    if _supabase_client is not None:
+        return _supabase_client
+
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_KEY")
 
     if not supabase_url or not supabase_key:
         raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be configured")
 
-    return create_client(supabase_url, supabase_key)
+    # Validate URL format
+    try:
+        parsed = urlparse(supabase_url)
+        if not parsed.scheme or not parsed.netloc:
+            raise ValueError
+    except Exception:
+        raise RuntimeError("SUPABASE_URL must be a valid HTTP/HTTPS URL")
+
+    if not supabase_url.startswith("https://") or not supabase_url.endswith(".supabase.co"):
+        raise RuntimeError("SUPABASE_URL must start with https:// and end with .supabase.co")
+
+    _supabase_client = create_client(supabase_url, supabase_key)
+    return _supabase_client
 
 
 @app.post("/webhook/evaluate-deal")

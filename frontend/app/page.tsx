@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { CheckCircle2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -20,6 +20,35 @@ const decisionColors: Record<string, string> = {
   REJECT: "text-rose-700 bg-rose-100",
 };
 
+let supabaseInstance: SupabaseClient | null = null;
+
+function getSupabaseClient(): SupabaseClient | null {
+  if (supabaseInstance) return supabaseInstance;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+    console.error("Missing Supabase credentials:", { url: !!url, key: !!key });
+    return null;
+  }
+
+  try {
+    new URL(url);
+  } catch {
+    console.error("Invalid Supabase URL:", url);
+    return null;
+  }
+
+  if (!url.startsWith("https://") || !url.endsWith(".supabase.co")) {
+    console.error("Invalid Supabase URL format:", url);
+    return null;
+  }
+
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
+}
+
 export default function Home() {
   const [records, setRecords] = useState<DealQueueRecord[]>([]);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
@@ -28,32 +57,14 @@ export default function Home() {
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [configError, setConfigError] = useState<string | null>(null);
 
-  const supabase = useMemo(() => {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = useMemo(() => getSupabaseClient(), []);
 
-    if (!url || !key) {
-      setConfigError("Missing Database Credentials: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local");
-      console.error("Missing Supabase credentials:", { url: !!url, key: !!key });
-      return null;
+  useEffect(() => {
+    if (!supabase) {
+      setConfigError("Missing Supabase Environment Variables in frontend/.env.local");
+      setIsLoading(false);
     }
-
-    try {
-      new URL(url);
-    } catch {
-      setConfigError("Invalid Supabase URL: Must be a valid HTTP or HTTPS URL");
-      console.error("Invalid Supabase URL:", url);
-      return null;
-    }
-
-    if (!url.startsWith("https://") || !url.endsWith(".supabase.co")) {
-      setConfigError("Invalid Supabase URL: Must start with https:// and end with .supabase.co");
-      console.error("Invalid Supabase URL format:", url);
-      return null;
-    }
-
-    return createClient(url, key);
-  }, []);
+  }, [supabase]);
 
   const fetchPending = useCallback(async () => {
     if (!supabase || configError) {
@@ -65,28 +76,36 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
 
-    const { data, error: queryError } = await supabase
-      .from("deal_queue")
-      .select("*")
-      .eq("human_status", "PENDING")
-      .order("id", { ascending: true });
+    try {
+      const { data, error: queryError } = await supabase
+        .from("deal_queue")
+        .select("*")
+        .eq("human_status", "PENDING")
+        .order("id", { ascending: true });
 
-    if (queryError) {
-      setError(queryError.message);
+      if (queryError) {
+        console.error("Supabase query error:", queryError);
+        setError(`Database error: ${queryError.message}`);
+        setIsLoading(false);
+        return;
+      }
+
+      const nextRecords = (data ?? []) as DealQueueRecord[];
+      setRecords(nextRecords);
+      setDrafts(
+        nextRecords.reduce<Record<number, string>>((acc, row) => {
+          acc[row.id] = row.email_draft;
+          return acc;
+        }, {})
+      );
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown fetch error";
+      console.error("Failed to fetch pending records:", err);
+      setError(`Failed to fetch: ${errorMessage}`);
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const nextRecords = (data ?? []) as DealQueueRecord[];
-    setRecords(nextRecords);
-    setDrafts(
-      nextRecords.reduce<Record<number, string>>((acc, row) => {
-        acc[row.id] = row.email_draft;
-        return acc;
-      }, {})
-    );
-    setIsLoading(false);
-  }, [supabase]);
+  }, [supabase, configError]);
 
   useEffect(() => {
     queueMicrotask(() => {
