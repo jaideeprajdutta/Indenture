@@ -1,5 +1,6 @@
 import json
 import os
+import random
 from pathlib import Path
 from urllib.parse import urlparse
 from typing import Optional
@@ -116,23 +117,80 @@ def evaluate_deal_webhook() -> dict:
     return {"deal_id": deal["deal_id"], "inserted": len(results), "results": results}
 
 
+def generate_synthetic_deal() -> dict:
+    industries = [
+        ("Healthcare Technology", "Strong recurring revenue, high margins, regulatory moats"),
+        ("B2B SaaS", "Predictable ARR, low churn, scalable model"),
+        ("Industrial Manufacturing", "Cyclical exposure, asset-heavy, stable customer base"),
+        ("Consumer Products", "Brand loyalty, distribution advantages, margin pressure"),
+        ("Financial Services", "Regulated, rate-sensitive, sticky deposits"),
+        ("Business Services", "Recurring contracts, low capex, fragmented market"),
+        ("Specialty Chemicals", "Niche positioning, high switching costs, ESG tailwinds"),
+        ("Food & Beverage", "Defensive, brand-driven, input cost volatility"),
+    ]
+    geographies = ["USA", "Canada", "UK", "Germany", "France"]
+    sources = ["simulated", "webhook", "referral", "conference"]
+    
+    name = f"Deal-{random.randint(1000, 9999)}"
+    industry, industry_ctx = random.choice(industries)
+    
+    profile = random.randint(0, 3)
+    if profile == 0:
+        ebitda = random.randint(12000000, 25000000)
+        leverage = round(random.uniform(2.0, 3.0), 1)
+        context = f"{industry_ctx}. Clean balance sheet at {leverage}x leverage. 3 years audited financials. Stable cash flows."
+        geography = random.choice(["USA", "Canada"])
+    elif profile == 1:
+        ebitda = random.randint(6000000, 15000000)
+        leverage = round(random.uniform(2.5, 4.5), 1)
+        context = f"{industry_ctx}. Moderate leverage at {leverage}x. Some customer concentration. Turnaround in progress."
+        geography = random.choice(["USA", "UK"])
+    elif profile == 2:
+        ebitda = random.randint(4000000, 8000000)
+        leverage = round(random.uniform(2.0, 3.5), 1)
+        context = f"{industry_ctx}. Growing platform at {leverage}x. Early stage but strong unit economics. 2 years audited financials."
+        geography = random.choice(["USA", "Germany", "France"])
+    else:
+        ebitda = random.randint(3500000, 8000000)
+        leverage = round(random.uniform(3.0, 5.0), 1)
+        context = f"{industry_ctx}. High leverage at {leverage}x. Aggressive growth strategy with acquisition pipeline."
+        geography = random.choice(["USA", "Germany", "France"])
+    
+    deal_size = ebitda * random.randint(8, 14)
+    
+    return {
+        "deal_id": f"SIM-{random.randint(100000, 999999)}",
+        "target_name": name,
+        "deal_size": deal_size,
+        "industry": industry,
+        "geography": geography,
+        "ebitda": ebitda,
+        "leverage": leverage,
+        "source": random.choice(sources),
+        "context_text": context,
+    }
+
+
 @app.post("/deals/simulate")
-def simulate_inbound_deal(request: SimulateDealRequest) -> dict:
+def simulate_inbound_deal(request: Optional[SimulateDealRequest] = None) -> dict:
     data_path = Path(__file__).parent / "data.json"
     payload = json.loads(data_path.read_text(encoding="utf-8"))
     lenders = payload["lenders"]
 
-    deal = {
-        "deal_id": f"SIM-{int(os.urandom(4).hex(), 16)}",
-        "target_name": request.deal_name,
-        "deal_size": request.deal_size,
-        "industry": request.industry,
-        "geography": request.geography,
-        "ebitda": request.ebitda,
-        "leverage": request.leverage,
-        "source": request.source,
-        "context_text": request.context_text,
-    }
+    if request is None:
+        deal = generate_synthetic_deal()
+    else:
+        deal = {
+            "deal_id": f"SIM-{int(os.urandom(4).hex(), 16)}",
+            "target_name": request.deal_name,
+            "deal_size": request.deal_size,
+            "industry": request.industry,
+            "geography": request.geography,
+            "ebitda": request.ebitda,
+            "leverage": request.leverage,
+            "source": request.source,
+            "context_text": request.context_text,
+        }
 
     eligible_lenders = filter_mandates(deal, lenders)
     if not eligible_lenders:

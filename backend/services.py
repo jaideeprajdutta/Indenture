@@ -25,16 +25,29 @@ def filter_mandates(deal: dict, mandates: list[dict]) -> list[dict]:
 def evaluate_qualitative_fit(deal: dict, lender: dict) -> DealEvaluation:
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     prompt = (
-        "You are a private credit triage copilot. Evaluate if the deal context violates "
-        "the lender's qualitative exclusion policy.\n\n"
+        "You are a private credit triage copilot. Evaluate the deal against the lender's mandate.\n\n"
         f"Lender: {lender['name']}\n"
         f"Qualitative Exclusion: {lender['qualitative_exclusion']}\n"
-        f"Deal Context: {deal['context_text']}\n\n"
-        "Return JSON only with keys: decision, evidence, email_draft. "
-        "decision must be one of ADVANCE, HOLD_MISSING_DATA, REJECT."
+        f"Deal Context: {deal['context_text']}\n"
+        f"Deal EBITDA: ${deal.get('ebitda', 'N/A'):,}\n"
+        f"Deal Leverage: {deal.get('leverage', 'N/A')}x\n"
+        f"Deal Geography: {deal.get('geography', 'N/A')}\n"
+        f"Deal Industry: {deal.get('industry', 'N/A')}\n"
+        f"Deal Size: ${deal.get('deal_size', 'N/A'):,}\n\n"
+        "Return JSON ONLY with these exact keys:\n"
+        "- decision: string (ADVANCE, HOLD, NURTURE, or REJECT)\n"
+        "- evidence: string (single string, not array)\n"
+        "- email_draft: string\n"
+        "- missing_info: string\n"
+        "- next_best_action: string\n\n"
+        "Decision criteria:\n"
+        "- ADVANCE: Strong fit, no issues\n"
+        "- HOLD: Potentially viable but missing critical information\n"
+        "- NURTURE: Not suitable now but could become suitable later (e.g., too small, early stage)\n"
+        "- REJECT: Clearly outside mandate or violates exclusion policy"
     )
 
-    models = ["openai/gpt-oss-20b", "llama-3.1-8b-instant"]
+    models = ["openai/gpt-oss-20b"]
     last_error = None
 
     for model in models:
@@ -47,6 +60,17 @@ def evaluate_qualitative_fit(deal: dict, lender: dict) -> DealEvaluation:
             )
             content = completion.choices[0].message.content or "{}"
             payload = json.loads(content)
+            
+            if isinstance(payload.get("evidence"), list):
+                payload["evidence"] = " ".join(str(x) for x in payload["evidence"])
+            
+            if "email_draft" not in payload:
+                payload["email_draft"] = "No draft generated."
+            if "missing_info" not in payload:
+                payload["missing_info"] = ""
+            if "next_best_action" not in payload:
+                payload["next_best_action"] = ""
+            
             return DealEvaluation.model_validate(payload)
         except Exception as e:
             last_error = e
