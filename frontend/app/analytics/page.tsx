@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { 
   BarChart3, TrendingUp, DollarSign, FileText, 
-  ArrowUpRight, ArrowDownRight, Minus, X, CheckCircle, 
-  AlertCircle, Clock, Target, Building2
+  ArrowUpRight, Minus, X, CheckCircle, 
+  Clock, Target, Building2
 } from "lucide-react";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -103,10 +103,10 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#07080B] flex items-center justify-center text-zinc-100 font-sans">
-        <div className="animate-pulse flex gap-4">
-          <div className="w-8 h-8 bg-zinc-800 rounded"></div>
-          <div className="w-8 h-8 bg-zinc-800 rounded"></div>
-          <div className="w-8 h-8 bg-zinc-800 rounded"></div>
+        <div className="animate-pulse flex gap-3">
+          <div className="w-6 h-6 bg-zinc-800 rounded"></div>
+          <div className="w-6 h-6 bg-zinc-800 rounded"></div>
+          <div className="w-6 h-6 bg-zinc-800 rounded"></div>
         </div>
       </div>
     );
@@ -115,10 +115,9 @@ export default function AnalyticsPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#07080B] flex items-center justify-center p-6 text-zinc-100 font-sans">
-        <div className="bg-rose-950/30 border border-rose-900/50 p-6 rounded-xl max-w-lg text-center backdrop-blur-xl">
-          <AlertCircle className="w-12 h-12 text-rose-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-rose-100 mb-2">Failed to load analytics</h2>
-          <p className="text-rose-300/80 font-mono text-sm">{error}</p>
+        <div className="bg-zinc-900 border border-zinc-700 p-6 max-w-lg text-center">
+          <h2 className="text-lg font-semibold text-zinc-100 mb-2">Failed to load analytics</h2>
+          <p className="text-zinc-400 font-mono text-sm">{error}</p>
         </div>
       </div>
     );
@@ -127,25 +126,22 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-[#07080B] text-zinc-100 font-sans selection:bg-emerald-500/30 flex flex-col">
       {/* HEADER */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04] bg-[#0B0C10]/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="flex items-center gap-6">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-emerald-500" />
-              INDENTURE: Analytics
-            </h1>
-            <p className="text-xs text-zinc-500 uppercase tracking-widest mt-0.5 font-semibold">Deal Flow Intelligence</p>
-          </div>
+      <header className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-[#0B0C10] sticky top-0 z-50">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-zinc-400" />
+            INDENTURE — Analytics
+          </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1">
           {["overview", "deals"].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as "overview" | "deals")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              className={`px-3 py-1.5 rounded text-[10px] font-semibold tracking-wider transition-colors ${
                 activeTab === tab
-                  ? "bg-zinc-800 text-white border border-zinc-700"
-                  : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 border border-transparent"
+                  ? "bg-zinc-800 text-white"
+                  : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
               }`}
             >
               {tab === "overview" ? "Overview" : "Deal Log"}
@@ -155,70 +151,36 @@ export default function AnalyticsPage() {
       </header>
 
       {activeTab === "overview" && analytics && (
-        <div className="flex-1 p-6 space-y-6">
+        <div className="flex-1 p-4 space-y-4">
           {/* KEY METRICS ROW */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricCard
-              icon={FileText}
-              label="Total Deals"
-              value={analytics.total_deals}
-              iconColor="text-blue-400"
-            />
-            <MetricCard
-              icon={CheckCircle}
-              label="ADVANCE %"
-              value={`${analytics.advance_pct}%`}
-              iconColor="text-emerald-400"
-              trend={analytics.advance_pct > 50 ? "positive" : "neutral"}
-            />
-            <MetricCard
-              icon={Clock}
-              label="HOLD %"
-              value={`${analytics.hold_pct}%`}
-              iconColor="text-amber-400"
-            />
-            <MetricCard
-              icon={Target}
-              label="NURTURE %"
-              value={`${analytics.nurture_pct}%`}
-              iconColor="text-blue-400"
-            />
-            <MetricCard
-              icon={X}
-              label="REJECT %"
-              value={`${analytics.reject_pct}%`}
-              iconColor="text-rose-400"
-            />
-            <MetricCard
-              icon={DollarSign}
-              label="Avg Deal Size"
-              value={formatCurrency(analytics.avg_deal_size)}
-              iconColor="text-green-400"
-            />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <MetricCard label="Total Deals" value={analytics.total_deals} />
+            <MetricCard label="ADVANCE %" value={`${analytics.advance_pct}%`} color="emerald" />
+            <MetricCard label="HOLD %" value={`${analytics.hold_pct}%`} color="amber" />
+            <MetricCard label="NURTURE %" value={`${analytics.nurture_pct}%`} color="blue" />
+            <MetricCard label="REJECT %" value={`${analytics.reject_pct}%`} color="rose" />
+            <MetricCard label="Avg Deal Size" value={formatCurrency(analytics.avg_deal_size)} color="green" />
           </div>
 
-          {/* DECISION BREAKDOWN */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#0B0C10] border border-white/[0.04] rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                Decision Distribution
-              </h3>
-              <div className="space-y-4">
+          {/* DECISION BREAKDOWN + DEALS BY SOURCE */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-zinc-900/50 border border-zinc-800 p-4">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Decision Distribution</h3>
+              <div className="space-y-3">
                 {[
                   { key: "ADVANCE", label: "ADVANCE", pct: analytics.advance_pct, color: "emerald" },
                   { key: "HOLD", label: "HOLD", pct: analytics.hold_pct, color: "amber" },
                   { key: "NURTURE", label: "NURTURE", pct: analytics.nurture_pct, color: "blue" },
                   { key: "REJECT", label: "REJECT", pct: analytics.reject_pct, color: "rose" },
                 ].map(({ key, label, pct, color }) => (
-                  <div key={key} className="space-y-1.5">
+                  <div key={key} className="space-y-1">
                     <div className="flex justify-between text-sm">
                       <span className={`font-medium text-${color}-400`}>{label}</span>
                       <span className="font-mono text-zinc-300">{pct}%</span>
                     </div>
-                    <div className="h-2 bg-zinc-900/50 rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-zinc-800 overflow-hidden">
                       <div 
-                        className={`h-full rounded-full transition-all duration-500 bg-${color}-500`}
+                        className={`h-full bg-${color}-500`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -227,27 +189,24 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="bg-[#0B0C10] border border-white/[0.04] rounded-xl p-6">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Deals by Source
-              </h3>
-              <div className="space-y-4">
+            <div className="bg-zinc-900/50 border border-zinc-800 p-4">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-3">Deals by Source</h3>
+              <div className="space-y-3">
                 {Object.entries(analytics.deals_by_source).length === 0 ? (
-                  <p className="text-zinc-500 text-center py-8">No source data available</p>
+                  <p className="text-zinc-500 text-center py-6 text-sm">No source data available</p>
                 ) : (
                   Object.entries(analytics.deals_by_source).map(([source, count]) => {
                     const advanced = analytics.advanced_by_source[source] || 0;
                     const rate = count > 0 ? Math.round(advanced / count * 100) : 0;
                     return (
-                      <div key={source} className="space-y-1.5">
+                      <div key={source} className="space-y-1">
                         <div className="flex justify-between text-sm">
                           <span className="font-medium text-zinc-200 capitalize">{source}</span>
                           <span className="font-mono text-zinc-400">{count} deals</span>
                         </div>
-                        <div className="h-2 bg-zinc-900/50 rounded-full overflow-hidden">
+                        <div className="h-1.5 bg-zinc-800 overflow-hidden">
                           <div 
-                            className="h-full rounded-full bg-emerald-500/30 transition-all duration-500"
+                            className="h-full bg-emerald-500/50"
                             style={{ width: `${rate}%` }}
                           />
                         </div>
@@ -264,23 +223,23 @@ export default function AnalyticsPage() {
           </div>
 
           {/* SOURCE PERFORMANCE TABLE */}
-          <div className="bg-[#0B0C10] border border-white/[0.04] rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/[0.04]">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-                <TrendingUp className="w-4 h-4" />
+          <div className="bg-zinc-900/50 border border-zinc-800 overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-800">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5" />
                 Source Performance
               </h3>
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.04] bg-zinc-900/30 text-left">
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider">Source</th>
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Total Deals</th>
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Advanced</th>
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Rejected</th>
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Advance Rate</th>
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Reject Rate</th>
-                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Avg Deal Size</th>
+                <tr className="border-b border-zinc-800 bg-zinc-900/50 text-left">
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Source</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider text-right">Total</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider text-right">Advanced</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider text-right">Rejected</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider text-right">Adv Rate</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider text-right">Rej Rate</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider text-right">Avg Size</th>
                 </tr>
               </thead>
               <tbody>
@@ -295,14 +254,14 @@ export default function AnalyticsPage() {
                     ? sourceDeals.reduce((sum, d) => sum + (d.deal_size || 0), 0) / sourceDeals.length 
                     : 0;
                   return (
-                    <tr key={source} className="border-b border-white/[0.02] hover:bg-zinc-900/30 transition-colors">
-                      <td className="px-6 py-3 font-mono text-zinc-200 capitalize">{source}</td>
-                      <td className="px-6 py-3 text-right font-mono text-zinc-300">{total}</td>
-                      <td className="px-6 py-3 text-right font-mono text-emerald-400">{advanced}</td>
-                      <td className="px-6 py-3 text-right font-mono text-rose-400">{rejected}</td>
-                      <td className="px-6 py-3 text-right font-mono text-emerald-400">{advanceRate}%</td>
-                      <td className="px-6 py-3 text-right font-mono text-rose-400">{rejectRate}%</td>
-                      <td className="px-6 py-3 text-right font-mono text-zinc-300">{formatCurrency(avgSize)}</td>
+                    <tr key={source} className="border-b border-zinc-800/50 hover:bg-zinc-900">
+                      <td className="px-4 py-2.5 font-mono text-zinc-200 capitalize">{source}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-zinc-300">{total}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-emerald-400">{advanced}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-rose-400">{rejected}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-emerald-400">{advanceRate}%</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-rose-400">{rejectRate}%</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-zinc-300">{formatCurrency(avgSize)}</td>
                     </tr>
                   );
                 })}
@@ -313,49 +272,46 @@ export default function AnalyticsPage() {
       )}
 
       {activeTab === "deals" && (
-        <div className="flex-1 p-6 overflow-auto">
-          <div className="bg-[#0B0C10] border border-white/[0.04] rounded-xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-white/[0.04] flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                All Deals
-              </h3>
-              <span className="text-sm text-zinc-500 font-mono">{deals.length} records</span>
+        <div className="flex-1 p-4 overflow-auto">
+          <div className="bg-zinc-900/50 border border-zinc-800 overflow-hidden">
+            <div className="px-4 py-3 border-b border-zinc-800 flex justify-between items-center">
+              <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">All Deals</h3>
+              <span className="text-xs text-zinc-500 font-mono">{deals.length} records</span>
             </div>
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-white/[0.04] bg-zinc-900/30 text-left">
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Deal</th>
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Lender</th>
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Decision</th>
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Size</th>
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Source</th>
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Status</th>
-                  <th className="px-4 py-3 font-medium text-zinc-400 uppercase tracking-wider">Date</th>
+                <tr className="border-b border-zinc-800 bg-zinc-900/50 text-left">
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Deal</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Lender</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Decision</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Size</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Source</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-2.5 font-medium text-zinc-400 uppercase tracking-wider">Date</th>
                 </tr>
               </thead>
               <tbody>
                 {deals.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-zinc-500">No deals recorded yet</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-zinc-500 text-sm">No deals recorded yet</td>
                   </tr>
                 ) : (
                   deals.map(deal => {
                     const config = getDecisionConfig(deal.ai_decision);
                     const Icon = config.icon;
                     return (
-                      <tr key={deal.id} className="border-b border-white/[0.02] hover:bg-zinc-900/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-zinc-100 max-w-xs truncate">{deal.deal_name}</td>
-                        <td className="px-4 py-3 text-zinc-400 font-mono">{deal.lender_name}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${config.bg} ${config.border} ${config.text}`}>
-                            <Icon className="w-3 h-3" />
+                      <tr key={deal.id} className="border-b border-zinc-800/50 hover:bg-zinc-900">
+                        <td className="px-4 py-2.5 font-medium text-zinc-100 max-w-xs truncate">{deal.deal_name}</td>
+                        <td className="px-4 py-2.5 text-zinc-400 font-mono">{deal.lender_name}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${config.bg} ${config.border} ${config.text}`}>
+                            <Icon className="w-2.5 h-2.5" />
                             {deal.ai_decision}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-zinc-300 font-mono">{formatCurrency(deal.deal_size)}</td>
-                        <td className="px-4 py-3 text-zinc-500 capitalize">{deal.source}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-2.5 text-zinc-300 font-mono">{formatCurrency(deal.deal_size)}</td>
+                        <td className="px-4 py-2.5 text-zinc-500 capitalize text-sm">{deal.source}</td>
+                        <td className="px-4 py-2.5">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                             deal.human_status === "APPROVED" ? "bg-emerald-950/40 text-emerald-400 border border-emerald-800/60" :
                             deal.human_status === "OVERRIDDEN" ? "bg-blue-950/40 text-blue-400 border border-blue-800/60" :
@@ -365,7 +321,7 @@ export default function AnalyticsPage() {
                             {deal.human_status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-zinc-500 font-mono text-xs">
+                        <td className="px-4 py-2.5 text-zinc-500 font-mono text-xs">
                           {new Date(deal.created_at).toLocaleDateString()}
                         </td>
                       </tr>
@@ -381,30 +337,15 @@ export default function AnalyticsPage() {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, iconColor, trend }: { 
-  icon: React.ElementType; 
+function MetricCard({ label, value, color }: { 
   label: string; 
   value: string | number; 
-  iconColor: string;
-  trend?: "positive" | "neutral";
+  color?: string;
 }) {
   return (
-    <div className="bg-[#0B0C10] border border-white/[0.04] rounded-xl p-5 hover:border-zinc-700/50 transition-colors">
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs text-zinc-500 uppercase tracking-wider font-medium mb-1">{label}</p>
-          <p className="text-3xl font-bold font-mono text-white">{value}</p>
-        </div>
-        <div className={`w-10 h-10 rounded-lg bg-zinc-900/50 flex items-center justify-center ${iconColor}`}>
-          <Icon className="w-5 h-5" />
-        </div>
-      </div>
-      {trend === "positive" && (
-        <div className="mt-3 flex items-center gap-1 text-emerald-400 text-xs font-medium">
-          <ArrowUpRight className="w-3 h-3" />
-          Above threshold
-        </div>
-      )}
+    <div className="bg-zinc-900/50 border border-zinc-800 p-3">
+      <p className="text-xs text-zinc-400 uppercase tracking-wider font-medium mb-1">{label}</p>
+      <p className="text-2xl font-bold font-mono text-white">{value}</p>
     </div>
   );
 }
