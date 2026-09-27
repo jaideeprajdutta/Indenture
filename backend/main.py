@@ -2,13 +2,15 @@ import json
 import os
 from pathlib import Path
 from urllib.parse import urlparse
+from typing import Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from supabase import Client, create_client
 
-from schemas import ApproveRequest
+from schemas import ApproveRequest, Decision
 from services import evaluate_qualitative_fit, filter_mandates, push_to_crm
 
 load_dotenv()
@@ -42,7 +44,6 @@ def get_supabase_client() -> Client:
     if not supabase_url or not supabase_key:
         raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be configured")
 
-    # Validate URL format
     try:
         parsed = urlparse(supabase_url)
         if not parsed.scheme or not parsed.netloc:
@@ -55,6 +56,17 @@ def get_supabase_client() -> Client:
 
     _supabase_client = create_client(supabase_url, supabase_key)
     return _supabase_client
+
+
+class SimulateDealRequest(BaseModel):
+    deal_name: str
+    deal_size: Optional[float] = None
+    industry: Optional[str] = None
+    geography: Optional[str] = None
+    ebitda: Optional[float] = None
+    leverage: Optional[float] = None
+    source: str = "simulated"
+    context_text: str
 
 
 @app.post("/webhook/evaluate-deal")
@@ -74,12 +86,28 @@ def evaluate_deal_webhook() -> dict:
 
     for lender in eligible_lenders:
         evaluation = evaluate_qualitative_fit(deal, lender)
+        
+        mandate_checks = {
+            "ebitda_check": deal["ebitda"] >= lender["min_ebitda"],
+            "leverage_check": deal["leverage"] <= lender["max_leverage"],
+            "geography_check": deal["geography"] in lender["allowed_geography"],
+        }
+        
         record = {
             "deal_name": deal["target_name"],
             "lender_name": lender["name"],
+            "deal_size": deal.get("deal_size"),
+            "industry": deal.get("industry"),
+            "geography": deal.get("geography"),
+            "ebitda": deal.get("ebitda"),
+            "leverage": deal.get("leverage"),
+            "source": deal.get("source", "webhook"),
             "ai_decision": evaluation.decision.value,
             "evidence": evaluation.evidence,
             "email_draft": evaluation.email_draft,
+            "missing_info": evaluation.missing_info,
+            "next_best_action": evaluation.next_best_action,
+            "mandate_checks": mandate_checks,
             "human_status": "PENDING",
         }
         supabase.table("deal_queue").insert(record).execute()
@@ -88,12 +116,128 @@ def evaluate_deal_webhook() -> dict:
     return {"deal_id": deal["deal_id"], "inserted": len(results), "results": results}
 
 
+@app.post("/deals/simulate")
+def simulate_inbound_deal(request: SimulateDealRequest) -> dict:
+    data_path = Path(__file__).parent / "data.json"
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+    lenders = payload["lenders"]
+
+    deal = {
+        "deal_id": f"SIM-{int(os.urandom(4).hex(), 16)}",
+        "target_name": request.deal_name,
+        "deal_size": request.deal_size,
+        "industry": request.industry,
+        "geography": request.geography,
+        "ebitda": request.ebitda,
+        "leverage": request.leverage,
+        "source": request.source,
+        "context_text": request.context_text,
+    }
+
+    eligible_lenders = filter_mandates(deal, lenders)
+    if not eligible_lenders:
+        return {"deal_id": deal["deal_id"], "inserted": 0, "results": [], "message": "No eligible lenders after mandate checks"}
+
+    supabase = get_supabase_client()
+    results: list[dict] = []
+
+    for lender in eligible_lenders:
+        evaluation = evaluate_qualitative_fit(deal, lender)
+        
+        mandate_checks = {
+            "ebitda_check": deal.get("ebitda", 0) >= lender["min_ebitda"],
+            "leverage_check": deal.get("leverage", 999) <= lender["max_leverage"],
+            "geography_check": deal.get("geography", "") in lender["allowed_geography"],
+        }
+        
+        record = {
+            "deal_name": deal["target_name"],
+            "lender_name": lender["name"],
+            "deal_size": deal.get("deal_size"),
+            "industry": deal.get("industry"),
+            "geography": deal.get("geography"),
+            "ebitda": deal.get("ebitda"),
+            "leverage": deal.get("leverage"),
+            "source": deal.get("source", "simulated"),
+            "ai_decision": evaluation.decision.value,
+            "evidence": evaluation.evidence,
+            "email_draft": evaluation.email_draft,
+            "missing_info": evaluation.missing_info,
+            "next_best_action": evaluation.next_best_action,
+            "mandate_checks": mandate_checks,
+            "human_status": "PENDING",
+        }
+        supabase.table("deal_queue").insert(record).execute()
+        results.append(record)
+
+    return {"deal_id": deal["deal_id"], "inserted": len(results), "results": results}
+
+
+@app.get("/analytics")
+def get_analytics() -> dict:
+    supabase = get_supabase_client()
+    
+    response = supabase.table("deal_queue").select("*").execute()
+    deals = response.data or []
+    
+    if not deals:
+        return {
+            "total_deals": 0,
+            "advance_pct": 0,
+            "hold_pct": 0,
+            "nurture_pct": 0,
+            "reject_pct": 0,
+            "avg_deal_size": 0,
+            "deals_by_source": {},
+            "advanced_by_source": {},
+        }
+    
+    total = len(deals)
+    decisions = [d.get("ai_decision", "") for d in deals]
+    advance_count = decisions.count("ADVANCE")
+    hold_count = decisions.count("HOLD")
+    nurture_count = decisions.count("NURTURE")
+    reject_count = decisions.count("REJECT")
+    
+    deal_sizes = [d.get("deal_size") for d in deals if d.get("deal_size")]
+    avg_deal_size = sum(deal_sizes) / len(deal_sizes) if deal_sizes else 0
+    
+    # Deals by source
+    deals_by_source = {}
+    for d in deals:
+        source = d.get("source", "unknown")
+        deals_by_source[source] = deals_by_source.get(source, 0) + 1
+    
+    # Advanced deals by source
+    advanced_by_source = {}
+    rejected_by_source = {}
+    for d in deals:
+        if d.get("ai_decision") == "ADVANCE":
+            source = d.get("source", "unknown")
+            advanced_by_source[source] = advanced_by_source.get(source, 0) + 1
+        elif d.get("ai_decision") == "REJECT":
+            source = d.get("source", "unknown")
+            rejected_by_source[source] = rejected_by_source.get(source, 0) + 1
+    
+    return {
+        "total_deals": total,
+        "advance_pct": round(advance_count / total * 100, 1),
+        "hold_pct": round(hold_count / total * 100, 1),
+        "nurture_pct": round(nurture_count / total * 100, 1),
+        "reject_pct": round(reject_count / total * 100, 1),
+        "avg_deal_size": round(avg_deal_size, 0),
+        "deals_by_source": deals_by_source,
+        "advanced_by_source": advanced_by_source,
+        "rejected_by_source": rejected_by_source,
+    }
+
+
 @app.post("/action/approve")
 def approve_deal(request: ApproveRequest) -> dict:
     supabase = get_supabase_client()
     update_response = (
         supabase.table("deal_queue")
-        .update({"human_status": "APPROVED"})
+        .update({"human_status": "APPROVED", "human_decision": "APPROVE"})
         .eq("deal_name", request.deal_name)
         .eq("lender_name", request.lender_name)
         .execute()
@@ -109,4 +253,39 @@ def approve_deal(request: ApproveRequest) -> dict:
         "deal_name": request.deal_name,
         "lender_name": request.lender_name,
         "crm_response": crm_response,
+    }
+
+
+@app.post("/action/override")
+def override_deal(request: ApproveRequest) -> dict:
+    supabase = get_supabase_client()
+    
+    override_reason = getattr(request, 'override_reason', '')
+    new_decision = getattr(request, 'human_decision', '')
+    
+    if not new_decision or new_decision not in ["ADVANCE", "HOLD", "NURTURE", "REJECT"]:
+        raise HTTPException(status_code=400, detail="Invalid human_decision. Must be one of ADVANCE, HOLD, NURTURE, REJECT")
+    
+    update_response = (
+        supabase.table("deal_queue")
+        .update({
+            "human_status": "OVERRIDDEN",
+            "human_decision": new_decision,
+            "override_reason": override_reason
+        })
+        .eq("deal_name", request.deal_name)
+        .eq("lender_name", request.lender_name)
+        .execute()
+    )
+
+    updated_rows = update_response.data or []
+    if not updated_rows:
+        raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+
+    return {
+        "status": "OVERRIDDEN",
+        "deal_name": request.deal_name,
+        "lender_name": request.lender_name,
+        "human_decision": new_decision,
+        "override_reason": override_reason,
     }

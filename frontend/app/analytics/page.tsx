@@ -22,6 +22,7 @@ interface AnalyticsData {
   avg_deal_size: number;
   deals_by_source: Record<string, number>;
   advanced_by_source: Record<string, number>;
+  rejected_by_source: Record<string, number>;
 }
 
 interface Deal {
@@ -276,7 +277,9 @@ export default function AnalyticsPage() {
                   <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider">Source</th>
                   <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Total Deals</th>
                   <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Advanced</th>
+                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Rejected</th>
                   <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Advance Rate</th>
+                  <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Reject Rate</th>
                   <th className="px-6 py-3 font-medium text-zinc-400 uppercase tracking-wider text-right">Avg Deal Size</th>
                 </tr>
               </thead>
@@ -284,7 +287,9 @@ export default function AnalyticsPage() {
                 {Object.keys(analytics.deals_by_source).map(source => {
                   const total = analytics.deals_by_source[source];
                   const advanced = analytics.advanced_by_source[source] || 0;
-                  const rate = total > 0 ? Math.round(advanced / total * 100) : 0;
+                  const rejected = analytics.rejected_by_source[source] || 0;
+                  const advanceRate = total > 0 ? Math.round(advanced / total * 100) : 0;
+                  const rejectRate = total > 0 ? Math.round(rejected / total * 100) : 0;
                   const sourceDeals = deals.filter(d => d.source === source && d.deal_size);
                   const avgSize = sourceDeals.length > 0 
                     ? sourceDeals.reduce((sum, d) => sum + (d.deal_size || 0), 0) / sourceDeals.length 
@@ -294,7 +299,9 @@ export default function AnalyticsPage() {
                       <td className="px-6 py-3 font-mono text-zinc-200 capitalize">{source}</td>
                       <td className="px-6 py-3 text-right font-mono text-zinc-300">{total}</td>
                       <td className="px-6 py-3 text-right font-mono text-emerald-400">{advanced}</td>
-                      <td className="px-6 py-3 text-right font-mono text-emerald-400">{rate}%</td>
+                      <td className="px-6 py-3 text-right font-mono text-rose-400">{rejected}</td>
+                      <td className="px-6 py-3 text-right font-mono text-emerald-400">{advanceRate}%</td>
+                      <td className="px-6 py-3 text-right font-mono text-rose-400">{rejectRate}%</td>
                       <td className="px-6 py-3 text-right font-mono text-zinc-300">{formatCurrency(avgSize)}</td>
                     </tr>
                   );
