@@ -6,7 +6,7 @@ import {
   Activity, Database, AlertCircle, CheckCircle2, 
   XCircle, RefreshCw, Briefcase, Mail, ShieldAlert, 
   ChevronRight, Inbox, Send, Archive, Target, Clock, 
-  AlertTriangle, Check, X, Loader2, FileText, Building2, DollarSign
+  AlertTriangle, Check, X, Loader2, FileText, Building2, DollarSign, Plus
 } from "lucide-react";
 
 // Initialize Supabase safely
@@ -25,6 +25,7 @@ export default function IndentureCommandCenter() {
   const [overrideModal, setOverrideModal] = useState<{deal: any, action: string} | null>(null);
   const [overrideReason, setOverrideReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   const fetchDeals = useCallback(async (showRefresh = false) => {
     if (!supabase) {
@@ -122,6 +123,23 @@ export default function IndentureCommandCenter() {
       alert(err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSimulate = async () => {
+    setIsSimulating(true);
+    try {
+      const res = await fetch(`${backendUrl}/deals/simulate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Simulation failed");
+      await fetchDeals(true);
+    } catch (err: any) {
+      console.error("Simulate error:", err);
+      alert(err.message);
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -251,13 +269,23 @@ export default function IndentureCommandCenter() {
             </button>
           ))}
         </div>
-        <button 
-          onClick={() => fetchDeals(true)}
-          className="flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-          SYNC FEED
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleSimulate}
+            disabled={isSimulating}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold tracking-wide bg-emerald-600 text-white hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus className={`w-3.5 h-3.5 ${isSimulating ? "animate-spin" : ""}`} />
+            + Simulate Inbound Deal
+          </button>
+          <button 
+            onClick={() => fetchDeals(true)}
+            className="flex items-center gap-2 text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+            SYNC FEED
+          </button>
+        </div>
       </div>
 
       {/* MAIN SPLIT PANE */}
