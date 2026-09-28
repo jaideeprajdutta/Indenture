@@ -13,6 +13,7 @@ from supabase import Client, create_client
 
 from schemas import ApproveRequest, Decision
 from services import evaluate_qualitative_fit, filter_mandates, push_to_crm
+from crm_adapter import route_deal_to_crm
 
 load_dotenv()
 
@@ -562,4 +563,32 @@ def override_deal(request: ApproveRequest) -> dict:
         "lender_name": request.lender_name,
         "human_decision": new_decision,
         "override_reason": override_reason,
+    }
+
+
+class RouteToCRMRequest(BaseModel):
+    deal_name: str
+    lender_name: str
+
+
+@app.post("/deals/{deal_id}/route-to-crm")
+def route_deal_to_crm_endpoint(deal_id: int, request: RouteToCRMRequest) -> dict:
+    """Route a deal to CRM."""
+    supabase = get_supabase_client()
+    
+    # Fetch the deal
+    deal = supabase.table("deal_queue").select("*").eq("id", deal_id).eq("deal_name", request.deal_name).eq("lender_name", request.lender_name).execute()
+    if not deal.data:
+        raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+    
+    deal_data = deal.data[0]
+    
+    # Route to CRM
+    result = route_deal_to_crm(supabase, deal_id, request.deal_name, request.lender_name, deal_data)
+    
+    return {
+        "success": result.success,
+        "provider": result.provider,
+        "record_id": result.record_id,
+        "error": result.error,
     }

@@ -17,6 +17,11 @@ create table if not exists deal_queue (
   human_status text not null default 'PENDING',
   human_decision text,
   override_reason text,
+  crm_provider text,
+  crm_status text,
+  crm_record_id text,
+  crm_routed_at timestamptz,
+  crm_error text,
   created_at timestamptz default now()
 );
 
