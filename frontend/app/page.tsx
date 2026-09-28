@@ -168,11 +168,10 @@ const handleRouteToCrm = async () => {
       const data = await res.json();
       await fetchDeals();
       await fetchHistory(dealName, lenderName);
+      setCrmRouting(null);
     } catch (err: any) {
       console.error("CRM routing error:", err);
       setCrmRouting({ loading: false, error: err.message });
-    } finally {
-      if (crmRouting?.loading) setCrmRouting(null);
     }
   };
 

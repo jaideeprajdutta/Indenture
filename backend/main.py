@@ -15,7 +15,7 @@ from schemas import ApproveRequest, Decision
 from services import evaluate_qualitative_fit, filter_mandates, push_to_crm
 from crm_adapter import route_deal_to_crm
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 app = FastAPI(title="indenture-core")
 
