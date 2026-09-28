@@ -86,7 +86,8 @@ export default function AnalyticsPage() {
   }, [fetchAnalytics, fetchDeals]);
 
   const getDecisionConfig = (decision: string) => {
-    switch (decision) {
+    const normalized = decision === "HOLD_MISSING_DATA" ? "HOLD" : decision;
+    switch (normalized) {
       case "ADVANCE": return { bg: "bg-emerald-950/40", border: "border-emerald-800/60", text: "text-emerald-400", icon: CheckCircle };
       case "HOLD": return { bg: "bg-amber-950/40", border: "border-amber-800/60", text: "text-amber-400", icon: Clock };
       case "NURTURE": return { bg: "bg-blue-950/40", border: "border-blue-800/60", text: "text-blue-400", icon: Target };

@@ -262,7 +262,7 @@ def get_analytics() -> dict:
     total = len(deals)
     decisions = [d.get("ai_decision", "") for d in deals]
     advance_count = decisions.count("ADVANCE")
-    hold_count = decisions.count("HOLD")
+    hold_count = decisions.count("HOLD") + decisions.count("HOLD_MISSING_DATA")
     nurture_count = decisions.count("NURTURE")
     reject_count = decisions.count("REJECT")
     
@@ -401,9 +401,15 @@ def simulate_mandate_changes(request: MandateSandboxRequest) -> dict:
     # Calculate simulated decision distribution (for deals that become eligible)
     decision_dist = {"ADVANCE": 0, "HOLD": 0, "NURTURE": 0, "REJECT": 0}
     for d in newly_eligible:
-        decision_dist[d["ai_decision"]] = decision_dist.get(d["ai_decision"], 0) + 1
+        decision = d["ai_decision"]
+        if decision == "HOLD_MISSING_DATA":
+            decision = "HOLD"
+        decision_dist[decision] = decision_dist.get(decision, 0) + 1
     for d in unchanged_eligible:
-        decision_dist[d["ai_decision"]] = decision_dist.get(d["ai_decision"], 0) + 1
+        decision = d["ai_decision"]
+        if decision == "HOLD_MISSING_DATA":
+            decision = "HOLD"
+        decision_dist[decision] = decision_dist.get(decision, 0) + 1
     
     return {
         "lender_name": request.lender_name,

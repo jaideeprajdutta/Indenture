@@ -191,7 +191,8 @@ export default function IndentureCommandCenter() {
   );
 
   const getStatusColor = (decision: string) => {
-    switch(decision?.toUpperCase()) {
+    const normalized = decision?.toUpperCase() === "HOLD_MISSING_DATA" ? "HOLD" : decision?.toUpperCase();
+    switch(normalized) {
       case "REJECT": return "text-rose-500";
       case "HOLD": return "text-amber-500";
       case "NURTURE": return "text-blue-500";
@@ -201,7 +202,8 @@ export default function IndentureCommandCenter() {
   };
 
   const getStatusLabel = (decision: string) => {
-    switch(decision?.toUpperCase()) {
+    const normalized = decision?.toUpperCase() === "HOLD_MISSING_DATA" ? "HOLD" : decision?.toUpperCase();
+    switch(normalized) {
       case "REJECT": return "REJECT";
       case "HOLD": return "HOLD";
       case "NURTURE": return "NURTURE";
