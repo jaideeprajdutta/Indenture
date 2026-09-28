@@ -59,6 +59,25 @@ def get_supabase_client() -> Client:
     return _supabase_client
 
 
+def record_history(supabase: Client, deal_queue_id: int, deal_name: str, lender_name: str, 
+                   event_type: str, previous_decision: str | None = None, 
+                   new_decision: str | None = None, reason: str | None = None) -> None:
+    """Record a history event for a deal."""
+    try:
+        supabase.table("deal_history").insert({
+            "deal_queue_id": deal_queue_id,
+            "deal_name": deal_name,
+            "lender_name": lender_name,
+            "event_type": event_type,
+            "previous_decision": previous_decision,
+            "new_decision": new_decision,
+            "reason": reason,
+        }).execute()
+    except Exception as e:
+        # Log but don't fail the main operation
+        print(f"Warning: Failed to record history: {e}")
+
+
 class SimulateDealRequest(BaseModel):
     deal_name: str
     deal_size: Optional[float] = None
@@ -234,7 +253,11 @@ def simulate_inbound_deal(request: Optional[SimulateDealRequest] = None) -> dict
             "mandate_checks": mandate_checks,
             "human_status": "PENDING",
         }
-        supabase.table("deal_queue").insert(record).execute()
+        insert_response = supabase.table("deal_queue").insert(record).execute()
+        inserted = insert_response.data[0] if insert_response.data else None
+        if inserted:
+            record_history(supabase, inserted["id"], deal["target_name"], lender["name"],
+                          "AI_DECISION", None, evaluation.decision.value, "Initial AI evaluation")
         results.append(record)
 
     return {"deal_id": deal["deal_id"], "inserted": len(results), "results": results}
@@ -297,6 +320,24 @@ def get_analytics() -> dict:
         "advanced_by_source": advanced_by_source,
         "rejected_by_source": rejected_by_source,
     }
+
+
+@app.get("/deal/history")
+def get_deal_history(deal_name: str, lender_name: str) -> dict:
+    """Get decision history for a specific deal."""
+    supabase = get_supabase_client()
+    
+    # Get the deal queue ID
+    deal = supabase.table("deal_queue").select("id").eq("deal_name", deal_name).eq("lender_name", lender_name).execute()
+    if not deal.data:
+        raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+    
+    deal_queue_id = deal.data[0]["id"]
+    
+    # Get history
+    history = supabase.table("deal_history").select("*").eq("deal_queue_id", deal_queue_id).order("created_at", desc=False).execute()
+    
+    return {"history": history.data}
 
 
 def check_mandate_eligibility(deal: dict, lender: dict) -> dict:
@@ -441,6 +482,15 @@ def get_sandbox_lenders() -> dict:
 @app.post("/action/approve")
 def approve_deal(request: ApproveRequest) -> dict:
     supabase = get_supabase_client()
+    
+    # Fetch current record to get previous decision
+    current = supabase.table("deal_queue").select("id, ai_decision, human_decision").eq("deal_name", request.deal_name).eq("lender_name", request.lender_name).execute()
+    if not current.data:
+        raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+    
+    current_record = current.data[0]
+    previous_decision = current_record.get("human_decision") or current_record.get("ai_decision")
+    
     update_response = (
         supabase.table("deal_queue")
         .update({"human_status": "APPROVED", "human_decision": "APPROVE"})
@@ -452,6 +502,9 @@ def approve_deal(request: ApproveRequest) -> dict:
     updated_rows = update_response.data or []
     if not updated_rows:
         raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+
+    record_history(supabase, current_record["id"], request.deal_name, request.lender_name,
+                  "HUMAN_APPROVE", previous_decision, "APPROVE", "Human approved AI decision")
 
     crm_response = {}
     try:
@@ -469,6 +522,14 @@ def approve_deal(request: ApproveRequest) -> dict:
 @app.post("/action/override")
 def override_deal(request: ApproveRequest) -> dict:
     supabase = get_supabase_client()
+    
+    # Fetch current record to get previous decision
+    current = supabase.table("deal_queue").select("id, ai_decision, human_decision").eq("deal_name", request.deal_name).eq("lender_name", request.lender_name).execute()
+    if not current.data:
+        raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+    
+    current_record = current.data[0]
+    previous_decision = current_record.get("human_decision") or current_record.get("ai_decision")
     
     override_reason = getattr(request, 'override_reason', '')
     new_decision = getattr(request, 'human_decision', '')
@@ -491,6 +552,9 @@ def override_deal(request: ApproveRequest) -> dict:
     updated_rows = update_response.data or []
     if not updated_rows:
         raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+
+    record_history(supabase, current_record["id"], request.deal_name, request.lender_name,
+                  "HUMAN_OVERRIDE", previous_decision, new_decision, override_reason)
 
     return {
         "status": "OVERRIDDEN",

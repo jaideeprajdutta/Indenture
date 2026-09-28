@@ -26,6 +26,8 @@ export default function IndentureCommandCenter() {
   const [overrideReason, setOverrideReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const fetchDeals = useCallback(async (showRefresh = false) => {
     if (!supabase) {
@@ -57,6 +59,21 @@ export default function IndentureCommandCenter() {
       setIsRefreshing(false);
     }
   }, []);
+  
+  const fetchHistory = useCallback(async (dealName: string, lenderName: string) => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch(`${backendUrl}/deal/history?deal_name=${encodeURIComponent(dealName)}&lender_name=${encodeURIComponent(lenderName)}`);
+      if (!res.ok) throw new Error("Failed to fetch history");
+      const data = await res.json();
+      setHistory(data.history || []);
+    } catch (err: any) {
+      console.error("History fetch error:", err);
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchDeals();
@@ -66,6 +83,7 @@ export default function IndentureCommandCenter() {
     // Optimistic UI update
     setDeals(deals.filter(d => d.id !== id));
     setSelectedDeal(null);
+    setHistory([]);
 
     try {
       if (supabase) {
@@ -88,6 +106,7 @@ export default function IndentureCommandCenter() {
       if (!res.ok) throw new Error("Approve failed");
       fetchDeals();
       setSelectedDeal(null);
+      setHistory([]);
     } catch (err: any) {
       console.error("Approve error:", err);
       alert(err.message);
@@ -120,6 +139,7 @@ export default function IndentureCommandCenter() {
       setSelectedDeal(null);
       setOverrideModal(null);
       setOverrideReason("");
+      setHistory([]);
     } catch (err: any) {
       console.error("Override error:", err);
       alert(err.message);
@@ -310,7 +330,7 @@ export default function IndentureCommandCenter() {
               return (
                 <div 
                   key={deal.id}
-                  onClick={() => setSelectedDeal(deal)}
+                  onClick={() => { setSelectedDeal(deal); fetchHistory(deal.deal_name, deal.lender_name); }}
                   className={`p-3 cursor-pointer bg-zinc-900/50 border border-zinc-800 ${
                     isSelected 
                       ? "border-emerald-500 bg-zinc-900" 
@@ -489,6 +509,57 @@ export default function IndentureCommandCenter() {
                   </div>
                 </div>
               )}
+
+              {/* Decision History */}
+              <div className="pt-3 border-t border-zinc-800">
+                <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5" />
+                  Decision History
+                </h3>
+                {historyLoading ? (
+                  <div className="text-zinc-500 text-sm">Loading history...</div>
+                ) : history.length === 0 ? (
+                  <div className="text-zinc-500 text-sm">No history available</div>
+                ) : (
+                  <div className="space-y-2">
+                    {history.map((event: any, idx: number) => (
+                      <div key={idx} className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                            {event.event_type}
+                          </span>
+                          <span className="text-xs text-zinc-500 font-mono">
+                            {new Date(event.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-zinc-300">
+                          {event.previous_decision && (
+                            <>
+                              <span className="text-zinc-500">Previous:</span>
+                              <span className="font-mono">{event.previous_decision}</span>
+                            </>
+                          )}
+                          {event.previous_decision && event.new_decision && (
+                            <span className="text-zinc-500 mx-1">→</span>
+                          )}
+                          {event.new_decision && (
+                            <>
+                              <span className="text-zinc-500">New:</span>
+                              <span className="font-mono">{event.new_decision}</span>
+                            </>
+                          )}
+                          {event.reason && (
+                            <>
+                              <span className="text-zinc-500 mx-1">|</span>
+                              <span className="text-zinc-500 italic">"{event.reason}"</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

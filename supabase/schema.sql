@@ -19,3 +19,18 @@ create table if not exists deal_queue (
   override_reason text,
   created_at timestamptz default now()
 );
+
+create table if not exists deal_history (
+  id serial primary key,
+  deal_queue_id integer not null references deal_queue(id) on delete cascade,
+  deal_name text not null,
+  lender_name text not null,
+  event_type text not null,
+  previous_decision text,
+  new_decision text,
+  reason text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_deal_history_deal_queue_id on deal_history(deal_queue_id);
+create index if not exists idx_deal_history_deal_name_lender on deal_history(deal_name, lender_name);
