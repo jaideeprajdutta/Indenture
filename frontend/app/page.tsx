@@ -105,9 +105,8 @@ export default function IndentureCommandCenter() {
         body: JSON.stringify({ deal_name: deal.deal_name, lender_name: deal.lender_name }),
       });
       if (!res.ok) throw new Error("Approve failed");
-      fetchDeals();
-      setSelectedDeal(null);
-      setHistory([]);
+      await fetchDeals();
+      await fetchHistory(deal.deal_name, deal.lender_name);
     } catch (err: any) {
       console.error("Approve error:", err);
       alert(err.message);
@@ -123,24 +122,25 @@ export default function IndentureCommandCenter() {
 
   const handleOverride = async () => {
     if (!overrideModal || !overrideReason.trim() || !overrideModal.action) return;
+    const dealName = overrideModal.deal.deal_name;
+    const lenderName = overrideModal.deal.lender_name;
     setIsSubmitting(true);
     try {
       const res = await fetch(`${backendUrl}/action/override`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          deal_name: overrideModal.deal.deal_name,
-          lender_name: overrideModal.deal.lender_name,
+          deal_name: dealName,
+          lender_name: lenderName,
           human_decision: overrideModal.action,
           override_reason: overrideReason,
         }),
       });
       if (!res.ok) throw new Error("Override failed");
-      fetchDeals();
-      setSelectedDeal(null);
+      await fetchDeals();
+      await fetchHistory(dealName, lenderName);
       setOverrideModal(null);
       setOverrideReason("");
-      setHistory([]);
     } catch (err: any) {
       console.error("Override error:", err);
       alert(err.message);
@@ -149,7 +149,7 @@ export default function IndentureCommandCenter() {
     }
   };
 
-  const handleRouteToCrm = async () => {
+const handleRouteToCrm = async () => {
     if (!selectedDeal) return;
     const dealName = selectedDeal.deal_name;
     const lenderName = selectedDeal.lender_name;
@@ -167,12 +167,6 @@ export default function IndentureCommandCenter() {
       if (!res.ok) throw new Error("CRM routing failed");
       const data = await res.json();
       await fetchDeals();
-      // Re-select the updated deal and refresh history
-      const updatedDeal = deals.find(d => d.id === dealId) || (await fetchDeals(), deals.find(d => d.id === dealId));
-      // Actually fetchDeals updates state asynchronously, so we need to wait and find the deal
-      // Since fetchDeals updates the deals state, we'll rely on the next render to have updated deals
-      // For now, just don't clear selectedDeal, let the fetchDeals update trigger a re-render
-      // The selectedDeal reference will be stale but we can fetch history using the stored names
       await fetchHistory(dealName, lenderName);
     } catch (err: any) {
       console.error("CRM routing error:", err);
