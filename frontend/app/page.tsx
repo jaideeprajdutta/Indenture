@@ -115,13 +115,13 @@ export default function IndentureCommandCenter() {
     }
   };
 
-  const openOverrideModal = (deal: any, action: string) => {
-    setOverrideModal({ deal, action });
+  const openOverrideModal = (deal: any) => {
+    setOverrideModal({ deal, action: "" });
     setOverrideReason("");
   };
 
   const handleOverride = async () => {
-    if (!overrideModal || !overrideReason.trim()) return;
+    if (!overrideModal || !overrideReason.trim() || !overrideModal.action) return;
     setIsSubmitting(true);
     try {
       const res = await fetch(`${backendUrl}/action/override`, {
@@ -172,10 +172,23 @@ export default function IndentureCommandCenter() {
         <div className="bg-zinc-900 border border-zinc-700 rounded p-5 w-full max-w-md mx-4">
           <h3 className="text-base font-semibold text-white mb-3">Override AI Decision</h3>
           <p className="text-zinc-400 text-sm mb-4">
-            Override <span className="font-mono text-emerald-400">{overrideModal.deal.ai_decision}</span> 
-            to <span className="font-mono text-blue-400">{overrideModal.action}</span> for 
+            Override <span className="font-mono text-emerald-400">{overrideModal.deal.ai_decision}</span> for 
             <span className="font-medium">{overrideModal.deal.deal_name}</span>
           </p>
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">New Decision</label>
+            <select
+              value={overrideModal.action}
+              onChange={(e) => setOverrideModal({...overrideModal, action: e.target.value})}
+              className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+            >
+              <option value="">Select decision...</option>
+              <option value="ADVANCE">ADVANCE</option>
+              <option value="HOLD">HOLD</option>
+              <option value="NURTURE">NURTURE</option>
+              <option value="REJECT">REJECT</option>
+            </select>
+          </div>
           <div className="mb-4">
             <label className="block text-xs font-medium text-zinc-400 mb-1.5">Reason (required)</label>
             <textarea
@@ -195,7 +208,7 @@ export default function IndentureCommandCenter() {
             </button>
             <button
               onClick={handleOverride}
-              disabled={isSubmitting || !overrideReason.trim()}
+              disabled={isSubmitting || !overrideReason.trim() || !overrideModal.action}
               className="px-3 py-1.5 rounded bg-blue-600 text-white font-medium hover:bg-blue-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Processing..." : "Confirm Override"}
@@ -454,25 +467,11 @@ export default function IndentureCommandCenter() {
               {selectedDeal.human_status === "PENDING" && (
                 <div className="flex flex-wrap gap-3 pt-3 border-t border-zinc-800">
                   <button 
-                    onClick={() => openOverrideModal(selectedDeal, "REJECT")}
-                    className="px-4 py-2 rounded bg-transparent border border-rose-500 text-rose-400 font-medium hover:bg-rose-950/20 flex items-center justify-center gap-1.5"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                    Reject
-                  </button>
-                  <button 
-                    onClick={() => openOverrideModal(selectedDeal, "HOLD")}
-                    className="px-4 py-2 rounded bg-transparent border border-amber-500 text-amber-400 font-medium hover:bg-amber-950/20 flex items-center justify-center gap-1.5"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    Hold
-                  </button>
-                  <button 
-                    onClick={() => openOverrideModal(selectedDeal, "NURTURE")}
+                    onClick={() => openOverrideModal(selectedDeal)}
                     className="px-4 py-2 rounded bg-transparent border border-blue-500 text-blue-400 font-medium hover:bg-blue-950/20 flex items-center justify-center gap-1.5"
                   >
-                    <Target className="w-3.5 h-3.5" />
-                    Nurture
+                    <Settings className="w-3.5 h-3.5" />
+                    Override
                   </button>
                   <button 
                     onClick={() => handleApprove(selectedDeal)}
