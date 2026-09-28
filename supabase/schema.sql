@@ -2,8 +2,20 @@ create table if not exists deal_queue (
   id serial primary key,
   deal_name text not null,
   lender_name text not null,
+  deal_size numeric,
+  industry text,
+  geography text,
+  ebitda numeric,
+  leverage numeric,
+  source text,
   ai_decision text not null,
   evidence text not null,
   email_draft text not null,
-  human_status text not null default 'PENDING'
+  missing_info text,
+  next_best_action text,
+  mandate_checks jsonb,
+  human_status text not null default 'PENDING',
+  human_decision text,
+  override_reason text,
+  created_at timestamptz default now()
 );

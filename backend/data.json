@@ -5,22 +5,32 @@
       "min_ebitda": 10000000,
       "max_leverage": 4.5,
       "allowed_geography": ["USA", "Canada"],
-      "qualitative_exclusion": "Turnaround deals or distressed assets."
+      "qualitative_exclusion": "Turnaround deals or distressed assets. No early-stage companies."
     },
     {
       "name": "Oak Hill",
       "min_ebitda": 5000000,
       "max_leverage": 3.0,
       "allowed_geography": ["UK", "USA"],
-      "qualitative_exclusion": "Startups without 3 years of audited financials."
+      "qualitative_exclusion": "Startups without 3 years of audited financials. No biotech pre-revenue."
+    },
+    {
+      "name": "Blue Owl",
+      "min_ebitda": 3000000,
+      "max_leverage": 5.0,
+      "allowed_geography": ["USA", "Germany", "France"],
+      "qualitative_exclusion": "No cyclical industrials. No real estate exposure."
     }
   ],
   "incoming_deal": {
     "deal_id": "D99",
     "target_name": "HealthTech Solutions",
+    "deal_size": 50000000,
+    "industry": "Healthcare Technology",
+    "geography": "USA",
     "ebitda": 12000000,
     "leverage": 2.5,
-    "geography": "USA",
-    "context_text": "Strong cash flow, but undergoing a turnaround strategy after recent executive departures."
+    "source": "webhook",
+    "context_text": "Strong cash flow, but undergoing a turnaround strategy after recent executive departures. 3 years audited financials available."
   }
 }
