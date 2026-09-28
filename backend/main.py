@@ -70,6 +70,15 @@ class SimulateDealRequest(BaseModel):
     context_text: str
 
 
+class MandateSandboxRequest(BaseModel):
+    lender_name: str
+    min_ebitda: Optional[int] = None
+    max_leverage: Optional[float] = None
+    allowed_geography: Optional[list[str]] = None
+    min_deal_size: Optional[int] = None
+    allowed_industry: Optional[list[str]] = None
+
+
 @app.post("/webhook/evaluate-deal")
 def evaluate_deal_webhook() -> dict:
     data_path = Path(__file__).parent / "data.json"
@@ -290,6 +299,139 @@ def get_analytics() -> dict:
     }
 
 
+def check_mandate_eligibility(deal: dict, lender: dict) -> dict:
+    """Check if a deal passes all mandate checks for a lender."""
+    ebitda = deal.get("ebitda") or 0
+    leverage = deal.get("leverage") or 999
+    geography = deal.get("geography") or ""
+    checks = {
+        "ebitda_check": ebitda >= lender.get("min_ebitda", 0),
+        "leverage_check": leverage <= lender.get("max_leverage", 999),
+        "geography_check": geography in lender.get("allowed_geography", []),
+    }
+    checks["eligible"] = all(checks.values())
+    return checks
+
+
+@app.post("/mandate-sandbox/simulate")
+def simulate_mandate_changes(request: MandateSandboxRequest) -> dict:
+    """Simulate mandate changes against existing deal_queue."""
+    supabase = get_supabase_client()
+    
+    # Get current mandates
+    data_path = Path(__file__).parent / "data.json"
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+    current_lenders = payload["lenders"]
+    
+    # Find the target lender
+    current_lender = next((l for l in current_lenders if l["name"] == request.lender_name), None)
+    if not current_lender:
+        raise HTTPException(status_code=404, detail=f"Lender {request.lender_name} not found")
+    
+    # Create simulated lender with overrides
+    simulated_lender = current_lender.copy()
+    if request.min_ebitda is not None:
+        simulated_lender["min_ebitda"] = request.min_ebitda
+    if request.max_leverage is not None:
+        simulated_lender["max_leverage"] = request.max_leverage
+    if request.allowed_geography is not None:
+        simulated_lender["allowed_geography"] = request.allowed_geography
+    if request.min_deal_size is not None:
+        simulated_lender["min_deal_size"] = request.min_deal_size
+    if request.allowed_industry is not None:
+        simulated_lender["allowed_industry"] = request.allowed_industry
+    
+    # Fetch all deals from queue
+    response = supabase.table("deal_queue").select("*").execute()
+    deals = response.data or []
+    
+    # Filter deals for this lender
+    lender_deals = [d for d in deals if d.get("lender_name") == request.lender_name]
+    
+    if not lender_deals:
+        return {
+            "lender_name": request.lender_name,
+            "current_mandate": current_lender,
+            "simulated_mandate": simulated_lender,
+            "eligible_before": 0,
+            "eligible_after": 0,
+            "newly_eligible": 0,
+            "no_longer_eligible": 0,
+            "unchanged": 0,
+            "decision_distribution": {},
+            "deal_details": [],
+        }
+    
+    # Evaluate each deal against both mandates
+    newly_eligible = []
+    no_longer_eligible = []
+    unchanged_eligible = []
+    unchanged_ineligible = []
+    
+    for deal in lender_deals:
+        current_checks = check_mandate_eligibility(deal, current_lender)
+        simulated_checks = check_mandate_eligibility(deal, simulated_lender)
+        
+        current_eligible = current_checks["eligible"]
+        simulated_eligible = simulated_checks["eligible"]
+        
+        deal_detail = {
+            "deal_name": deal.get("deal_name"),
+            "deal_size": deal.get("deal_size"),
+            "industry": deal.get("industry"),
+            "geography": deal.get("geography"),
+            "ebitda": deal.get("ebitda"),
+            "leverage": deal.get("leverage"),
+            "current_eligible": current_eligible,
+            "simulated_eligible": simulated_eligible,
+            "current_checks": current_checks,
+            "simulated_checks": simulated_checks,
+            "ai_decision": deal.get("ai_decision"),
+        }
+        
+        if not current_eligible and simulated_eligible:
+            newly_eligible.append(deal_detail)
+        elif current_eligible and not simulated_eligible:
+            no_longer_eligible.append(deal_detail)
+        elif current_eligible and simulated_eligible:
+            unchanged_eligible.append(deal_detail)
+        else:
+            unchanged_ineligible.append(deal_detail)
+    
+    # Calculate simulated decision distribution (for deals that become eligible)
+    decision_dist = {"ADVANCE": 0, "HOLD": 0, "NURTURE": 0, "REJECT": 0}
+    for d in newly_eligible:
+        decision_dist[d["ai_decision"]] = decision_dist.get(d["ai_decision"], 0) + 1
+    for d in unchanged_eligible:
+        decision_dist[d["ai_decision"]] = decision_dist.get(d["ai_decision"], 0) + 1
+    
+    return {
+        "lender_name": request.lender_name,
+        "current_mandate": current_lender,
+        "simulated_mandate": simulated_lender,
+        "eligible_before": len(unchanged_eligible) + len(no_longer_eligible),
+        "eligible_after": len(unchanged_eligible) + len(newly_eligible),
+        "newly_eligible": len(newly_eligible),
+        "no_longer_eligible": len(no_longer_eligible),
+        "unchanged": len(unchanged_eligible) + len(unchanged_ineligible),
+        "decision_distribution": decision_dist,
+        "deal_details": {
+            "newly_eligible": newly_eligible,
+            "no_longer_eligible": no_longer_eligible,
+            "unchanged_eligible": unchanged_eligible,
+            "unchanged_ineligible": unchanged_ineligible,
+        },
+    }
+
+
+@app.get("/mandate-sandbox/lenders")
+def get_sandbox_lenders() -> dict:
+    """Get list of lenders with current mandates for sandbox."""
+    data_path = Path(__file__).parent / "data.json"
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+    return {"lenders": payload["lenders"]}
+
+
 @app.post("/action/approve")
 def approve_deal(request: ApproveRequest) -> dict:
     supabase = get_supabase_client()
@@ -305,7 +447,11 @@ def approve_deal(request: ApproveRequest) -> dict:
     if not updated_rows:
         raise HTTPException(status_code=404, detail="Matching deal queue record not found")
 
-    crm_response = push_to_crm(request.deal_name, "APPROVED")
+    crm_response = {}
+    try:
+        crm_response = push_to_crm(request.deal_name, "APPROVED")
+    except Exception as e:
+        crm_response = {"error": str(e)}
     return {
         "status": "APPROVED",
         "deal_name": request.deal_name,

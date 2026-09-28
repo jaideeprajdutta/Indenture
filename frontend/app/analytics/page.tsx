@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 import { 
   BarChart3, TrendingUp, DollarSign, FileText, 
   ArrowUpRight, Minus, X, CheckCircle, 
-  Clock, Target, Building2
+  Clock, Target, Building2, Settings
 } from "lucide-react";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -133,20 +133,26 @@ export default function AnalyticsPage() {
             INDENTURE — Analytics
           </h1>
         </div>
-        <div className="flex gap-1">
-          {["overview", "deals"].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab as "overview" | "deals")}
-              className={`px-3 py-1.5 rounded text-[10px] font-semibold tracking-wider transition-colors ${
-                activeTab === tab
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
-              }`}
-            >
-              {tab === "overview" ? "Overview" : "Deal Log"}
-            </button>
-          ))}
+        <div className="flex items-center gap-4">
+          <div className="flex gap-1">
+            {["overview", "deals"].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab as "overview" | "deals")}
+                className={`px-3 py-1.5 rounded text-[10px] font-semibold tracking-wider transition-colors ${
+                  activeTab === tab
+                    ? "bg-zinc-800 text-white"
+                    : "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800"
+                }`}
+              >
+                {tab === "overview" ? "Overview" : "Deal Log"}
+              </button>
+            ))}
+          </div>
+          <a href="/sandbox" className="flex items-center gap-1 px-3 py-1.5 rounded text-[10px] font-semibold tracking-wider text-zinc-500 hover:text-white hover:bg-zinc-800 transition-colors">
+            <Settings className="w-3 h-3" />
+            Sandbox
+          </a>
         </div>
       </header>
 

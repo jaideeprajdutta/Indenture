@@ -6,7 +6,7 @@ import {
   Activity, Database, CheckCircle2, 
   RefreshCw, Briefcase, ShieldAlert, 
   Inbox, Target, Clock, 
-  AlertTriangle, Check, X, Loader2, FileText, Building2, DollarSign, Plus
+  AlertTriangle, Check, X, Loader2, FileText, Building2, DollarSign, Plus, Settings
 } from "lucide-react";
 
 // Initialize Supabase safely
@@ -39,10 +39,12 @@ export default function IndentureCommandCenter() {
     try {
       const { data, error: queryError } = await supabase
         .from("deal_queue")
-        .select("*");
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (queryError) throw queryError;
       
+      console.log("Fetched deals:", data?.length);
       setDeals(data || []);
       if (data && data.length > 0 && !selectedDeal) {
         setSelectedDeal(data[0]);
@@ -54,7 +56,7 @@ export default function IndentureCommandCenter() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [selectedDeal]);
+  }, []);
 
   useEffect(() => {
     fetchDeals();
@@ -240,6 +242,11 @@ export default function IndentureCommandCenter() {
             <Database className="w-3 h-3" />
             Synced
           </span>
+          <span className="w-px h-4 bg-zinc-700"></span>
+          <a href="/sandbox" className="flex items-center gap-1 hover:text-white hover:text-emerald-400 transition-colors">
+            <Settings className="w-3 h-3" />
+            Sandbox
+          </a>
         </div>
       </header>
 
