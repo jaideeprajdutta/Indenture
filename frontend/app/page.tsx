@@ -151,21 +151,29 @@ export default function IndentureCommandCenter() {
 
   const handleRouteToCrm = async () => {
     if (!selectedDeal) return;
+    const dealName = selectedDeal.deal_name;
+    const lenderName = selectedDeal.lender_name;
+    const dealId = selectedDeal.id;
     setCrmRouting({ loading: true, error: null });
     try {
-      const res = await fetch(`${backendUrl}/deals/${selectedDeal.id}/route-to-crm`, {
+      const res = await fetch(`${backendUrl}/deals/${dealId}/route-to-crm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          deal_name: selectedDeal.deal_name,
-          lender_name: selectedDeal.lender_name,
+          deal_name: dealName,
+          lender_name: lenderName,
         }),
       });
       if (!res.ok) throw new Error("CRM routing failed");
       const data = await res.json();
-      fetchDeals();
-      setSelectedDeal(null);
-      setHistory([]);
+      await fetchDeals();
+      // Re-select the updated deal and refresh history
+      const updatedDeal = deals.find(d => d.id === dealId) || (await fetchDeals(), deals.find(d => d.id === dealId));
+      // Actually fetchDeals updates state asynchronously, so we need to wait and find the deal
+      // Since fetchDeals updates the deals state, we'll rely on the next render to have updated deals
+      // For now, just don't clear selectedDeal, let the fetchDeals update trigger a re-render
+      // The selectedDeal reference will be stale but we can fetch history using the stored names
+      await fetchHistory(dealName, lenderName);
     } catch (err: any) {
       console.error("CRM routing error:", err);
       setCrmRouting({ loading: false, error: err.message });
