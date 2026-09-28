@@ -28,6 +28,7 @@ export default function IndentureCommandCenter() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [crmRouting, setCrmRouting] = useState<{loading: boolean; error: string | null} | null>(null);
 
   const fetchDeals = useCallback(async (showRefresh = false) => {
     if (!supabase) {
@@ -145,6 +146,31 @@ export default function IndentureCommandCenter() {
       alert(err.message);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleRouteToCrm = async () => {
+    if (!selectedDeal) return;
+    setCrmRouting({ loading: true, error: null });
+    try {
+      const res = await fetch(`${backendUrl}/deals/${selectedDeal.id}/route-to-crm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deal_name: selectedDeal.deal_name,
+          lender_name: selectedDeal.lender_name,
+        }),
+      });
+      if (!res.ok) throw new Error("CRM routing failed");
+      const data = await res.json();
+      fetchDeals();
+      setSelectedDeal(null);
+      setHistory([]);
+    } catch (err: any) {
+      console.error("CRM routing error:", err);
+      setCrmRouting({ loading: false, error: err.message });
+    } finally {
+      if (crmRouting?.loading) setCrmRouting(null);
     }
   };
 
@@ -474,6 +500,14 @@ export default function IndentureCommandCenter() {
                     Override
                   </button>
                   <button 
+                    onClick={handleRouteToCrm}
+                    disabled={isSubmitting || crmRouting?.loading}
+                    className="px-4 py-2 rounded bg-transparent border border-emerald-500 text-emerald-400 font-medium hover:bg-emerald-950/20 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Activity className={`w-3.5 h-3.5 ${crmRouting?.loading ? "animate-spin" : ""}`} />
+                    Route to CRM
+                  </button>
+                  <button 
                     onClick={() => handleApprove(selectedDeal)}
                     disabled={isSubmitting}
                     className="px-4 py-2 rounded bg-emerald-600 text-white font-medium hover:bg-emerald-500 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -481,6 +515,11 @@ export default function IndentureCommandCenter() {
                     {isSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                     {isSubmitting ? "Processing..." : "Approve & Advance"}
                   </button>
+                  {crmRouting?.error && (
+                    <span className="px-3 py-1.5 text-xs text-rose-400 font-mono bg-rose-950/20 border border-rose-800/50 rounded self-center">
+                      CRM Error: {crmRouting.error}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -504,6 +543,65 @@ export default function IndentureCommandCenter() {
                       <span className="text-zinc-500 text-sm italic ml-auto">
                         "{selectedDeal.override_reason}"
                       </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* CRM Routing Status */}
+              {(selectedDeal.crm_status === "ROUTED" || selectedDeal.crm_status === "FAILED") && (
+                <div className="pt-3 border-t border-zinc-800">
+                  <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5" />
+                    CRM Routing
+                  </h3>
+                  <div className="bg-zinc-900/50 border border-zinc-800 p-3 rounded">
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-zinc-400">Provider:</span>
+                        <span className="font-mono text-zinc-200">{selectedDeal.crm_provider || "—"}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-zinc-400">Status:</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider font-mono ${
+                          selectedDeal.crm_status === "ROUTED" 
+                            ? "bg-emerald-950/40 text-emerald-400 border border-emerald-800/60" 
+                            : "bg-rose-950/40 text-rose-400 border border-rose-800/60"
+                        }`}>
+                          {selectedDeal.crm_status === "ROUTED" 
+                            ? (selectedDeal.crm_record_id?.startsWith("SIM-") ? "Simulated" : "Routed")
+                            : "Failed"
+                          }
+                        </span>
+                      </span>
+                      {selectedDeal.crm_record_id && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-zinc-400">Record ID:</span>
+                          <span className="font-mono text-zinc-200">{selectedDeal.crm_record_id}</span>
+                        </span>
+                      )}
+                      {selectedDeal.crm_routed_at && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-zinc-400">Routed:</span>
+                          <span className="font-mono text-zinc-200 text-xs">{new Date(selectedDeal.crm_routed_at).toLocaleString()}</span>
+                        </span>
+                      )}
+                      {selectedDeal.crm_error && (
+                        <span className="flex items-center gap-1.5 text-rose-400">
+                          <span className="text-zinc-400">Error:</span>
+                          <span className="font-mono text-sm">{selectedDeal.crm_error}</span>
+                        </span>
+                      )}
+                    </div>
+                    {selectedDeal.human_decision && (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Routed decision: <span className="font-mono text-zinc-300">{selectedDeal.human_decision}</span> (overridden)
+                      </p>
+                    )}
+                    {(!selectedDeal.human_decision && selectedDeal.ai_decision) && (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Routed decision: <span className="font-mono text-zinc-300">{selectedDeal.ai_decision}</span> (AI)
+                      </p>
                     )}
                   </div>
                 </div>
