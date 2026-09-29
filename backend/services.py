@@ -63,8 +63,39 @@ def filter_mandates(deal: dict, mandates: list[dict]) -> list[dict]:
     return eligible_lenders
 
 
+def _format_enrichment_context(deal: dict) -> str:
+    """Format enrichment fields for AI context, clearly labeled as enriched data."""
+    enrichment_fields = {
+        "website": deal.get("website"),
+        "revenue": deal.get("revenue"),
+        "employee_count": deal.get("employee_count"),
+        "ownership_type": deal.get("ownership_type"),
+        "transaction_type": deal.get("transaction_type"),
+        "enrichment_source": deal.get("enrichment_source"),
+        "enrichment_confidence": deal.get("enrichment_confidence"),
+    }
+    
+    # Only include fields that have values
+    present_fields = {k: v for k, v in enrichment_fields.items() if v is not None}
+    
+    if not present_fields:
+        return ""
+    
+    lines = ["\n[ENRICHED DATA - Contextual evidence from external source:]"]
+    for key, value in present_fields.items():
+        if key == "revenue" and isinstance(value, (int, float)):
+            lines.append(f"  Enriched {key}: ${value:,.0f}")
+        elif key == "enrichment_confidence" and isinstance(value, (int, float)):
+            lines.append(f"  Enriched {key}: {value:.0%}")
+        else:
+            lines.append(f"  Enriched {key}: {value}")
+    lines.append("[END ENRICHED DATA]")
+    return "\n".join(lines)
+
+
 def evaluate_qualitative_fit(deal: dict, lender: dict) -> DealEvaluation:
     client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    enrichment_context = _format_enrichment_context(deal)
     prompt = (
         "You are a private credit triage copilot. Evaluate the deal against the lender's mandate.\n\n"
         f"Lender: {lender['name']}\n"
@@ -74,7 +105,8 @@ def evaluate_qualitative_fit(deal: dict, lender: dict) -> DealEvaluation:
         f"Deal Leverage: {deal.get('leverage', 'N/A')}x\n"
         f"Deal Geography: {deal.get('geography', 'N/A')}\n"
         f"Deal Industry: {deal.get('industry', 'N/A')}\n"
-        f"Deal Size: ${deal.get('deal_size', 'N/A'):,}\n\n"
+        f"Deal Size: ${deal.get('deal_size', 'N/A'):,}"
+        f"{enrichment_context}\n\n"
         "Return JSON ONLY with these exact keys:\n"
         "- decision: string (ADVANCE, HOLD, NURTURE, or REJECT)\n"
         "- evidence: string (single string, not array)\n"
@@ -85,7 +117,10 @@ def evaluate_qualitative_fit(deal: dict, lender: dict) -> DealEvaluation:
         "- ADVANCE: Strong fit, no issues\n"
         "- HOLD: Potentially viable but missing critical information\n"
         "- NURTURE: Not suitable now but could become suitable later (e.g., too small, early stage)\n"
-        "- REJECT: Clearly outside mandate or violates exclusion policy"
+        "- REJECT: Clearly outside mandate or violates exclusion policy\n\n"
+        "NOTE: Enriched data (marked above) is contextual evidence only. "
+        "Do not change your decision solely based on enriched fields. "
+        "Use them to strengthen or qualify your reasoning alongside original deal data."
     )
 
     models = ["openai/gpt-oss-20b"]
