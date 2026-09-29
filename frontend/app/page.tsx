@@ -6,7 +6,8 @@ import {
   Activity, Database, CheckCircle2, 
   RefreshCw, Briefcase, ShieldAlert, 
   Inbox, Target, Clock, 
-  AlertTriangle, Check, X, Loader2, FileText, Building2, DollarSign, Plus, Settings
+  AlertTriangle, Check, X, Loader2, FileText, Building2, DollarSign, Plus, Settings,
+  Globe
 } from "lucide-react";
 
 // Initialize Supabase safely
@@ -29,6 +30,7 @@ export default function IndentureCommandCenter() {
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [crmRouting, setCrmRouting] = useState<{loading: boolean; error: string | null} | null>(null);
+  const [enrichment, setEnrichment] = useState<{loading: boolean; error: string | null} | null>(null);
 
   const fetchDeals = useCallback(async (showRefresh = false) => {
     if (!supabase) {
@@ -172,6 +174,32 @@ const handleRouteToCrm = async () => {
     } catch (err: any) {
       console.error("CRM routing error:", err);
       setCrmRouting({ loading: false, error: err.message });
+    }
+  };
+
+  const handleEnrichDeal = async () => {
+    if (!selectedDeal) return;
+    const dealName = selectedDeal.deal_name;
+    const lenderName = selectedDeal.lender_name;
+    const dealId = selectedDeal.id;
+    setEnrichment({ loading: true, error: null });
+    try {
+      const res = await fetch(`${backendUrl}/deals/${dealId}/enrich`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deal_name: dealName,
+          lender_name: lenderName,
+        }),
+      });
+      if (!res.ok) throw new Error("Enrichment failed");
+      const data = await res.json();
+      await fetchDeals();
+      await fetchHistory(dealName, lenderName);
+      setEnrichment(null);
+    } catch (err: any) {
+      console.error("Enrichment error:", err);
+      setEnrichment({ loading: false, error: err.message });
     }
   };
 
@@ -509,6 +537,14 @@ const handleRouteToCrm = async () => {
                     Route to CRM
                   </button>
                   <button 
+                    onClick={handleEnrichDeal}
+                    disabled={isSubmitting || enrichment?.loading}
+                    className="px-4 py-2 rounded bg-transparent border border-amber-500 text-amber-400 font-medium hover:bg-amber-950/20 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Globe className={`w-3.5 h-3.5 ${enrichment?.loading ? "animate-spin" : ""}`} />
+                    Enrich Deal
+                  </button>
+                  <button 
                     onClick={() => handleApprove(selectedDeal)}
                     disabled={isSubmitting}
                     className="px-4 py-2 rounded bg-emerald-600 text-white font-medium hover:bg-emerald-500 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -519,6 +555,11 @@ const handleRouteToCrm = async () => {
                   {crmRouting?.error && (
                     <span className="px-3 py-1.5 text-xs text-rose-400 font-mono bg-rose-950/20 border border-rose-800/50 rounded self-center">
                       CRM Error: {crmRouting.error}
+                    </span>
+                  )}
+                  {enrichment?.error && (
+                    <span className="px-3 py-1.5 text-xs text-rose-400 font-mono bg-rose-950/20 border border-rose-800/50 rounded self-center">
+                      Enrichment Error: {enrichment.error}
                     </span>
                   )}
                 </div>
@@ -546,6 +587,26 @@ const handleRouteToCrm = async () => {
                       </span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Enrichment Action Button (when not PENDING but enrichment needed) */}
+              {selectedDeal.human_status !== "PENDING" && 
+               (!selectedDeal.enrichment_status || selectedDeal.enrichment_status === "PENDING" || selectedDeal.enrichment_status === "FAILED") && (
+                <div className="pt-3 border-t border-zinc-800">
+                  <button 
+                    onClick={handleEnrichDeal}
+                    disabled={isSubmitting || enrichment?.loading}
+                    className="px-4 py-2 rounded bg-transparent border border-amber-500 text-amber-400 font-medium hover:bg-amber-950/20 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Globe className={`w-3.5 h-3.5 ${enrichment?.loading ? "animate-spin" : ""}`} />
+                    Enrich Deal
+                  </button>
+                  {enrichment?.error && (
+                    <span className="px-3 py-1.5 text-xs text-rose-400 font-mono bg-rose-950/20 border border-rose-800/50 rounded self-center mt-2 block">
+                      Enrichment Error: {enrichment.error}
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -603,6 +664,85 @@ const handleRouteToCrm = async () => {
                       <p className="mt-2 text-xs text-zinc-500">
                         Routed decision: <span className="font-mono text-zinc-300">{selectedDeal.ai_decision}</span> (AI)
                       </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Enrichment Status */}
+              {(selectedDeal.enrichment_status === "ENRICHED" || selectedDeal.enrichment_status === "FAILED") && (
+                <div className="pt-3 border-t border-zinc-800">
+                  <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5" />
+                    Enrichment
+                  </h3>
+                  <div className="bg-zinc-900/50 border border-zinc-800 p-3 rounded">
+                    <div className="flex flex-wrap items-center gap-4 text-sm mb-3">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-zinc-400">Source:</span>
+                        <span className="font-mono text-zinc-200">{selectedDeal.enrichment_source || "—"}</span>
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-zinc-400">Status:</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider font-mono ${
+                          selectedDeal.enrichment_status === "ENRICHED" 
+                            ? "bg-emerald-950/40 text-emerald-400 border border-emerald-800/60" 
+                            : "bg-rose-950/40 text-rose-400 border border-rose-800/60"
+                        }`}>
+                          {selectedDeal.enrichment_status === "ENRICHED" ? "Enriched" : "Failed"}
+                        </span>
+                      </span>
+                      {selectedDeal.enrichment_confidence && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-zinc-400">Confidence:</span>
+                          <span className="font-mono text-zinc-200">{(selectedDeal.enrichment_confidence * 100).toFixed(0)}%</span>
+                        </span>
+                      )}
+                      {selectedDeal.enriched_at && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-zinc-400">Enriched:</span>
+                          <span className="font-mono text-zinc-200 text-xs">{new Date(selectedDeal.enriched_at).toLocaleString()}</span>
+                        </span>
+                      )}
+                    </div>
+                    {selectedDeal.enrichment_status === "ENRICHED" && (
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-3 border-t border-zinc-800">
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-500 font-mono">Website</span>
+                          <div className="text-sm text-zinc-200 font-mono truncate">
+                            {selectedDeal.website || "—"}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-500 font-mono">Revenue</span>
+                          <div className="text-sm text-zinc-200 font-mono">
+                            {selectedDeal.revenue ? `$${(selectedDeal.revenue/1000000).toFixed(1)}M` : "—"}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-500 font-mono">Employees</span>
+                          <div className="text-sm text-zinc-200 font-mono">
+                            {selectedDeal.employee_count ? selectedDeal.employee_count.toLocaleString() : "—"}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-500 font-mono">Ownership</span>
+                          <div className="text-sm text-zinc-200 font-mono">
+                            {selectedDeal.ownership_type || "—"}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-500 font-mono">Txn Type</span>
+                          <div className="text-sm text-zinc-200 font-mono">
+                            {selectedDeal.transaction_type || "—"}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {selectedDeal.enrichment_status === "FAILED" && selectedDeal.crm_error && (
+                      <div className="mt-3 text-rose-400 text-sm font-mono">
+                        Error: {selectedDeal.crm_error}
+                      </div>
                     )}
                   </div>
                 </div>
