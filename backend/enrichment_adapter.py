@@ -134,7 +134,7 @@ class ApolloEnrichmentProvider(EnrichmentProvider):
         self.base_url = "https://api.apollo.io/api/v1/organizations/enrich"
     
     def _extract_domain(self, deal_data: dict) -> Optional[str]:
-        """Extract domain from deal data for Apollo lookup."""
+        """Extract and validate domain from deal data for Apollo lookup."""
         # Try website first
         website = deal_data.get("website")
         if website:
@@ -142,18 +142,67 @@ class ApolloEnrichmentProvider(EnrichmentProvider):
             import re
             match = re.search(r'https?://(?:www\.)?([^/]+)', website)
             if match:
-                return match.group(1)
+                domain = match.group(1).strip().lower()
+                if self._is_valid_real_domain(domain):
+                    return domain
         
-        # Fallback to deal name - try to extract a domain-like string
-        deal_name = deal_data.get("deal_name", "")
-        if deal_name:
-            # Simple heuristic: lowercase, remove spaces/special chars
-            import re
-            domain_candidate = re.sub(r'[^a-zA-Z0-9.-]', '', deal_name.lower())
-            if '.' in domain_candidate or len(domain_candidate) > 3:
-                return domain_candidate
-        
+        # No valid domain found
         return None
+    
+    def _is_valid_real_domain(self, domain: str) -> bool:
+        """
+        Validate that a domain looks like a real company domain.
+        Rejects obvious synthetic/test values.
+        """
+        if not domain or len(domain) < 4:
+            return False
+        
+        # Must have at least one dot (e.g., example.com)
+        if '.' not in domain:
+            return False
+        
+        # Reject obvious synthetic/test patterns
+        synthetic_patterns = [
+            'test', 'demo', 'fake', 'mock', 'local', 
+            'staging', 'dev', 'sandbox', 'temp', 'sample', 'placeholder',
+            'aienriched', 'enriched', 'synthetic', 'simulated'
+        ]
+        domain_lower = domain.lower()
+        
+        # Check if the subdomain part matches synthetic patterns exactly or as full words
+        parts = domain_lower.split('.')
+        subdomain = parts[0]
+        
+        # Reject if subdomain is exactly a synthetic pattern or contains them as distinct parts
+        for pattern in synthetic_patterns:
+            if subdomain == pattern or subdomain.startswith(pattern + '-') or subdomain.endswith('-' + pattern):
+                return False
+        
+        # Reject if any part matches exactly (but allow "example" in TLD position)
+        for i, part in enumerate(parts[:-1]):  # exclude TLD
+            if part in synthetic_patterns:
+                return False
+        
+        # Reject domains that are just random strings or too short
+        # Real domains typically have meaningful subdomain + TLD
+        if len(parts) < 2:
+            return False
+        
+        # TLD should be reasonable (2+ chars)
+        tld = parts[-1]
+        if len(tld) < 2 or len(tld) > 10:
+            return False
+        
+        # Subdomain should not be just random characters
+        subdomain = parts[0]
+        if len(subdomain) < 2:
+            return False
+        
+        # Reject if subdomain looks like a hash or random string (alphanumeric, very long)
+        if subdomain.isalnum() and len(subdomain) > 20:
+            return False
+        
+        return True
     
     def _map_apollo_response(self, apollo_data: dict) -> dict:
         """Map Apollo response to our enrichment contract."""
@@ -215,7 +264,7 @@ class ApolloEnrichmentProvider(EnrichmentProvider):
                 success=False,
                 provider="apollo",
                 data=None,
-                error="Could not determine domain for enrichment lookup",
+                error="Could not determine a valid real company domain for Apollo enrichment. Provide a valid company website with a real domain.",
                 confidence=None
             )
         
@@ -249,6 +298,30 @@ class ApolloEnrichmentProvider(EnrichmentProvider):
                     provider="apollo",
                     data=None,
                     error="Invalid Apollo API key",
+                    confidence=None
+                )
+            
+            if response.status_code == 422:
+                # Capture Apollo's error details for better debugging
+                error_detail = "Apollo validation error (422): domain may be invalid or not processable"
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict):
+                        if 'error' in error_data:
+                            error_detail = f"Apollo 422: {error_data['error']}"
+                        elif 'errors' in error_data:
+                            error_detail = f"Apollo 422: {error_data['errors']}"
+                        elif 'detail' in error_data:
+                            error_detail = f"Apollo 422: {error_data['detail']}"
+                        else:
+                            error_detail = f"Apollo 422: {error_data}"
+                except Exception:
+                    pass
+                return EnrichmentResult(
+                    success=False,
+                    provider="apollo",
+                    data=None,
+                    error=error_detail,
                     confidence=None
                 )
             
