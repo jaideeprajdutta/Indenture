@@ -1,6 +1,7 @@
 """Enrichment Adapter - Abstract interface for deal enrichment providers"""
 
 import os
+import requests
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
@@ -122,8 +123,206 @@ class DemoEnrichmentProvider(EnrichmentProvider):
         )
 
 
+class ApolloEnrichmentProvider(EnrichmentProvider):
+    """Apollo.io Organization Enrichment API provider."""
+    
+    def __init__(self):
+        super().__init__()
+        self.provider_name = "apollo"
+        self.enabled = os.getenv("APOLLO_ENABLED", "false").lower() == "true"
+        self.api_key = os.getenv("APOLLO_API_KEY", "")
+        self.base_url = "https://api.apollo.io/api/v1/organizations/enrich"
+    
+    def _extract_domain(self, deal_data: dict) -> Optional[str]:
+        """Extract domain from deal data for Apollo lookup."""
+        # Try website first
+        website = deal_data.get("website")
+        if website:
+            # Extract domain from URL
+            import re
+            match = re.search(r'https?://(?:www\.)?([^/]+)', website)
+            if match:
+                return match.group(1)
+        
+        # Fallback to deal name - try to extract a domain-like string
+        deal_name = deal_data.get("deal_name", "")
+        if deal_name:
+            # Simple heuristic: lowercase, remove spaces/special chars
+            import re
+            domain_candidate = re.sub(r'[^a-zA-Z0-9.-]', '', deal_name.lower())
+            if '.' in domain_candidate or len(domain_candidate) > 3:
+                return domain_candidate
+        
+        return None
+    
+    def _map_apollo_response(self, apollo_data: dict) -> dict:
+        """Map Apollo response to our enrichment contract."""
+        organization = apollo_data.get("organization", {})
+        if not organization:
+            return {}
+        
+        mapped = {}
+        
+        # Website - Apollo provides website_url
+        if organization.get("website_url"):
+            mapped["website"] = organization["website_url"]
+        
+        # Revenue - Apollo provides estimated_annual_revenue
+        if organization.get("estimated_annual_revenue") is not None:
+            try:
+                mapped["revenue"] = float(organization["estimated_annual_revenue"])
+            except (ValueError, TypeError):
+                pass
+        
+        # Employee count - Apollo provides employee_count
+        if organization.get("employee_count") is not None:
+            try:
+                mapped["employee_count"] = int(organization["employee_count"])
+            except (ValueError, TypeError):
+                pass
+        
+        # Ownership type - Apollo doesn't directly provide this
+        # We leave it null as instructed
+        
+        # Transaction type - Apollo doesn't provide this
+        # We leave it null as instructed
+        
+        return mapped
+    
+    def enrich_deal(self, deal_data: dict) -> EnrichmentResult:
+        """Enrich a deal using Apollo API."""
+        if not self.enabled:
+            return EnrichmentResult(
+                success=False,
+                provider="apollo",
+                data=None,
+                error="Apollo enrichment provider is disabled",
+                confidence=None
+            )
+        
+        if not self.api_key:
+            return EnrichmentResult(
+                success=False,
+                provider="apollo",
+                data=None,
+                error="Apollo API key not configured",
+                confidence=None
+            )
+        
+        domain = self._extract_domain(deal_data)
+        if not domain:
+            return EnrichmentResult(
+                success=False,
+                provider="apollo",
+                data=None,
+                error="Could not determine domain for enrichment lookup",
+                confidence=None
+            )
+        
+        headers = {
+            "X-Api-Key": self.api_key,
+            "Content-Type": "application/json",
+        }
+        
+        params = {"domain": domain}
+        
+        try:
+            response = requests.get(
+                self.base_url,
+                headers=headers,
+                params=params,
+                timeout=30
+            )
+            
+            if response.status_code == 404:
+                return EnrichmentResult(
+                    success=False,
+                    provider="apollo",
+                    data=None,
+                    error=f"No organization found for domain: {domain}",
+                    confidence=None
+                )
+            
+            if response.status_code == 401:
+                return EnrichmentResult(
+                    success=False,
+                    provider="apollo",
+                    data=None,
+                    error="Invalid Apollo API key",
+                    confidence=None
+                )
+            
+            if response.status_code == 429:
+                return EnrichmentResult(
+                    success=False,
+                    provider="apollo",
+                    data=None,
+                    error="Apollo API rate limit exceeded",
+                    confidence=None
+                )
+            
+            response.raise_for_status()
+            apollo_response = response.json()
+            
+            mapped_data = self._map_apollo_response(apollo_response)
+            
+            if not mapped_data:
+                return EnrichmentResult(
+                    success=False,
+                    provider="apollo",
+                    data=None,
+                    error="Apollo returned no mappable enrichment data",
+                    confidence=None
+                )
+            
+            # Apollo doesn't provide confidence, estimate based on data completeness
+            confidence = 0.7
+            if mapped_data.get("revenue") is not None:
+                confidence += 0.1
+            if mapped_data.get("employee_count") is not None:
+                confidence += 0.1
+            if mapped_data.get("website") is not None:
+                confidence += 0.1
+            
+            return EnrichmentResult(
+                success=True,
+                provider="apollo",
+                data=mapped_data,
+                error=None,
+                confidence=round(min(confidence, 0.95), 2)
+            )
+            
+        except requests.exceptions.Timeout:
+            return EnrichmentResult(
+                success=False,
+                provider="apollo",
+                data=None,
+                error="Apollo API timeout",
+                confidence=None
+            )
+        except requests.exceptions.RequestException as e:
+            return EnrichmentResult(
+                success=False,
+                provider="apollo",
+                data=None,
+                error=f"Apollo API request failed: {str(e)}",
+                confidence=None
+            )
+        except Exception as e:
+            return EnrichmentResult(
+                success=False,
+                provider="apollo",
+                data=None,
+                error=f"Apollo enrichment failed: {str(e)}",
+                confidence=None
+            )
+
+
 def get_enrichment_provider() -> EnrichmentProvider:
     """Factory function to get the appropriate enrichment provider."""
+    # Priority: Apollo if enabled, otherwise Demo
+    if os.getenv("APOLLO_ENABLED", "false").lower() == "true" and os.getenv("APOLLO_API_KEY"):
+        return ApolloEnrichmentProvider()
     return DemoEnrichmentProvider()
 
 
