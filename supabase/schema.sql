@@ -22,6 +22,15 @@ create table if not exists deal_queue (
   crm_record_id text,
   crm_routed_at timestamptz,
   crm_error text,
+  enrichment_status text,
+  enrichment_source text,
+  enrichment_confidence numeric,
+  enriched_at timestamptz,
+  website text,
+  revenue numeric,
+  employee_count integer,
+  ownership_type text,
+  transaction_type text,
   created_at timestamptz default now()
 );
 

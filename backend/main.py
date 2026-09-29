@@ -14,6 +14,7 @@ from supabase import Client, create_client
 from schemas import ApproveRequest, Decision
 from services import evaluate_qualitative_fit, filter_mandates, push_to_crm
 from crm_adapter import route_deal_to_crm
+from enrichment_adapter import enrich_deal
 
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
@@ -571,7 +572,36 @@ class RouteToCRMRequest(BaseModel):
     lender_name: str
 
 
-@app.post("/deals/{deal_id}/route-to-crm")
+class EnrichDealRequest(BaseModel):
+    deal_name: str
+    lender_name: str
+
+
+@app.post("/deals/{deal_id}/enrich")
+def enrich_deal_endpoint(deal_id: int, request: EnrichDealRequest) -> dict:
+    """Enrich a deal with additional data."""
+    supabase = get_supabase_client()
+    
+    # Fetch the deal
+    deal = supabase.table("deal_queue").select("*").eq("id", deal_id).eq("deal_name", request.deal_name).eq("lender_name", request.lender_name).execute()
+    if not deal.data:
+        raise HTTPException(status_code=404, detail="Matching deal queue record not found")
+    
+    deal_data = deal.data[0]
+    
+    # Enrich the deal
+    result = enrich_deal(supabase, deal_id, request.deal_name, request.lender_name, deal_data)
+    
+    # Return updated deal
+    updated = supabase.table("deal_queue").select("*").eq("id", deal_id).execute()
+    
+    return {
+        "success": result.success,
+        "provider": result.provider,
+        "confidence": result.confidence,
+        "error": result.error,
+        "deal": updated.data[0] if updated.data else None,
+    }
 def route_deal_to_crm_endpoint(deal_id: int, request: RouteToCRMRequest) -> dict:
     """Route a deal to CRM."""
     supabase = get_supabase_client()
