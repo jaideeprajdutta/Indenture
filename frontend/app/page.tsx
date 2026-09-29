@@ -63,6 +63,10 @@ export default function IndentureCommandCenter() {
     }
   }, []);
   
+  const clearEnrichmentError = useCallback(() => {
+    setEnrichment(prev => prev?.error ? { loading: false, error: null } : prev);
+  }, []);
+  
   const fetchHistory = useCallback(async (dealName: string, lenderName: string) => {
     setHistoryLoading(true);
     try {
@@ -192,8 +196,13 @@ const handleRouteToCrm = async () => {
           lender_name: lenderName,
         }),
       });
-      if (!res.ok) throw new Error("Enrichment failed");
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || data?.detail || `Enrichment failed (${res.status})`);
+      }
+      if (!data.success) {
+        throw new Error(data.error || "Enrichment failed");
+      }
       await fetchDeals();
       await fetchHistory(dealName, lenderName);
       setEnrichment(null);
@@ -398,7 +407,7 @@ const handleRouteToCrm = async () => {
               return (
                 <div 
                   key={deal.id}
-                  onClick={() => { setSelectedDeal(deal); fetchHistory(deal.deal_name, deal.lender_name); }}
+                  onClick={() => { clearEnrichmentError(); setSelectedDeal(deal); fetchHistory(deal.deal_name, deal.lender_name); }}
                   className={`p-3 cursor-pointer bg-zinc-900/50 border border-zinc-800 ${
                     isSelected 
                       ? "border-emerald-500 bg-zinc-900" 
@@ -739,11 +748,11 @@ const handleRouteToCrm = async () => {
                         </div>
                       </div>
                     )}
-                    {selectedDeal.enrichment_status === "FAILED" && selectedDeal.crm_error && (
-                      <div className="mt-3 text-rose-400 text-sm font-mono">
-                        Error: {selectedDeal.crm_error}
-                      </div>
-                    )}
+{selectedDeal.enrichment_status === "FAILED" && (
+                        <div className="mt-3 text-rose-400 text-sm font-mono">
+                          Enrichment failed - check Decision History for details
+                        </div>
+                      )}
                   </div>
                 </div>
               )}
