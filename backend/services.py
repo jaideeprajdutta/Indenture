@@ -1,5 +1,6 @@
 import json
 import os
+from typing import Optional
 
 import requests
 from groq import Groq
@@ -7,18 +8,58 @@ from groq import Groq
 from schemas import DealEvaluation
 
 
-def filter_mandates(deal: dict, mandates: list[dict]) -> list[dict]:
-    eligible_lenders: list[dict] = []
+def normalize_deal_for_mandates(deal: dict) -> dict:
+    """
+    Create a normalized deal view for mandate evaluation.
+    
+    Precedence: original deal fields > enriched fields > defaults
+    Enriched fields only fill in missing original values.
+    
+    Args:
+        deal: Raw deal dict (may contain enrichment fields)
+    
+    Returns:
+        Normalized deal dict with fallback values filled in
+    """
+    normalized = deal.copy()
+    
+    # Deal size: use original if present, fallback to enriched revenue
+    if normalized.get("deal_size") is None and normalized.get("revenue") is not None:
+        normalized["deal_size"] = normalized["revenue"]
+    
+    # For fields that don't have direct enrichment mappings, keep original
+    # The current enrichment fields (website, revenue, employee_count, 
+    # ownership_type, transaction_type) don't directly map to:
+    # - ebitda
+    # - leverage  
+    # - geography
+    # - industry
+    # So we just pass through original values
+    
+    return normalized
 
+
+def filter_mandates(deal: dict, mandates: list[dict]) -> list[dict]:
+    """Filter lenders based on mandate checks using normalized deal."""
+    # Normalize deal to include enriched fields as fallbacks
+    normalized_deal = normalize_deal_for_mandates(deal)
+    
+    eligible_lenders: list[dict] = []
+    
     for lender in mandates:
-        if deal["ebitda"] < lender["min_ebitda"]:
+        # Use .get() with safe defaults to handle missing fields
+        ebitda = normalized_deal.get("ebitda", 0)
+        leverage = normalized_deal.get("leverage", 999)
+        geography = normalized_deal.get("geography", "")
+        
+        if ebitda < lender["min_ebitda"]:
             continue
-        if deal["leverage"] > lender["max_leverage"]:
+        if leverage > lender["max_leverage"]:
             continue
-        if deal["geography"] not in lender["allowed_geography"]:
+        if geography not in lender["allowed_geography"]:
             continue
         eligible_lenders.append(lender)
-
+    
     return eligible_lenders
 
 

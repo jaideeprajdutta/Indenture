@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from supabase import Client, create_client
 
 from schemas import ApproveRequest, Decision
-from services import evaluate_qualitative_fit, filter_mandates, push_to_crm
+from services import evaluate_qualitative_fit, filter_mandates, push_to_crm, normalize_deal_for_mandates
 from crm_adapter import route_deal_to_crm
 from enrichment_adapter import enrich_deal
 
@@ -87,6 +87,7 @@ class SimulateDealRequest(BaseModel):
     geography: Optional[str] = None
     ebitda: Optional[float] = None
     leverage: Optional[float] = None
+    revenue: Optional[float] = None
     source: str = "simulated"
     context_text: str
 
@@ -115,23 +116,26 @@ def evaluate_deal_webhook() -> dict:
     supabase = get_supabase_client()
     results: list[dict] = []
 
+    # Normalize deal once to use enriched fields as fallbacks
+    normalized_deal = normalize_deal_for_mandates(deal)
+
     for lender in eligible_lenders:
-        evaluation = evaluate_qualitative_fit(deal, lender)
+        evaluation = evaluate_qualitative_fit(normalized_deal, lender)
         
         mandate_checks = {
-            "ebitda_check": deal["ebitda"] >= lender["min_ebitda"],
-            "leverage_check": deal["leverage"] <= lender["max_leverage"],
-            "geography_check": deal["geography"] in lender["allowed_geography"],
+            "ebitda_check": normalized_deal.get("ebitda", 0) >= lender["min_ebitda"],
+            "leverage_check": normalized_deal.get("leverage", 999) <= lender["max_leverage"],
+            "geography_check": normalized_deal.get("geography", "") in lender["allowed_geography"],
         }
         
         record = {
             "deal_name": deal["target_name"],
             "lender_name": lender["name"],
-            "deal_size": deal.get("deal_size"),
-            "industry": deal.get("industry"),
-            "geography": deal.get("geography"),
-            "ebitda": deal.get("ebitda"),
-            "leverage": deal.get("leverage"),
+            "deal_size": normalized_deal.get("deal_size"),
+            "industry": normalized_deal.get("industry"),
+            "geography": normalized_deal.get("geography"),
+            "ebitda": normalized_deal.get("ebitda"),
+            "leverage": normalized_deal.get("leverage"),
             "source": deal.get("source", "webhook"),
             "ai_decision": evaluation.decision.value,
             "evidence": evaluation.evidence,
@@ -218,6 +222,7 @@ def simulate_inbound_deal(request: Optional[SimulateDealRequest] = None) -> dict
             "geography": request.geography,
             "ebitda": request.ebitda,
             "leverage": request.leverage,
+            "revenue": request.revenue,
             "source": request.source,
             "context_text": request.context_text,
         }
@@ -229,23 +234,26 @@ def simulate_inbound_deal(request: Optional[SimulateDealRequest] = None) -> dict
     supabase = get_supabase_client()
     results: list[dict] = []
 
+    # Normalize deal once to use enriched fields as fallbacks
+    normalized_deal = normalize_deal_for_mandates(deal)
+
     for lender in eligible_lenders:
-        evaluation = evaluate_qualitative_fit(deal, lender)
+        evaluation = evaluate_qualitative_fit(normalized_deal, lender)
         
         mandate_checks = {
-            "ebitda_check": deal.get("ebitda", 0) >= lender["min_ebitda"],
-            "leverage_check": deal.get("leverage", 999) <= lender["max_leverage"],
-            "geography_check": deal.get("geography", "") in lender["allowed_geography"],
+            "ebitda_check": normalized_deal.get("ebitda", 0) >= lender["min_ebitda"],
+            "leverage_check": normalized_deal.get("leverage", 999) <= lender["max_leverage"],
+            "geography_check": normalized_deal.get("geography", "") in lender["allowed_geography"],
         }
         
         record = {
             "deal_name": deal["target_name"],
             "lender_name": lender["name"],
-            "deal_size": deal.get("deal_size"),
-            "industry": deal.get("industry"),
-            "geography": deal.get("geography"),
-            "ebitda": deal.get("ebitda"),
-            "leverage": deal.get("leverage"),
+            "deal_size": normalized_deal.get("deal_size"),
+            "industry": normalized_deal.get("industry"),
+            "geography": normalized_deal.get("geography"),
+            "ebitda": normalized_deal.get("ebitda"),
+            "leverage": normalized_deal.get("leverage"),
             "source": deal.get("source", "simulated"),
             "ai_decision": evaluation.decision.value,
             "evidence": evaluation.evidence,
