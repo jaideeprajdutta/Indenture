@@ -520,16 +520,29 @@ def approve_deal(request: ApproveRequest) -> dict:
     record_history(supabase, current_record["id"], request.deal_name, request.lender_name,
                   "HUMAN_APPROVE", previous_decision, "APPROVE", "Human approved AI decision")
 
-    crm_response = {}
-    try:
-        crm_response = push_to_crm(request.deal_name, "APPROVED")
-    except Exception as e:
-        crm_response = {"error": str(e)}
+    # Effective decision: human confirms AI decision, so use the AI decision
+    effective_decision = current_record.get("ai_decision")
+    
+    # Update deal with effective decision
+    supabase.table("deal_queue").update({
+        "effective_decision": effective_decision,
+    }).eq("id", current_record["id"]).execute()
+
+    # Route to CRM using the CRM adapter
+    crm_result = route_deal_to_crm(supabase, current_record["id"], request.deal_name, request.lender_name, 
+                                    {**current_record, "human_decision": "APPROVE", "effective_decision": effective_decision})
+    
     return {
         "status": "APPROVED",
         "deal_name": request.deal_name,
         "lender_name": request.lender_name,
-        "crm_response": crm_response,
+        "effective_decision": effective_decision,
+        "crm_routing": {
+            "success": crm_result.success,
+            "provider": crm_result.provider,
+            "record_id": crm_result.record_id,
+            "error": crm_result.error,
+        },
     }
 
 
@@ -556,7 +569,8 @@ def override_deal(request: ApproveRequest) -> dict:
         .update({
             "human_status": "OVERRIDDEN",
             "human_decision": new_decision,
-            "override_reason": override_reason
+            "override_reason": override_reason,
+            "effective_decision": new_decision,
         })
         .eq("deal_name", request.deal_name)
         .eq("lender_name", request.lender_name)
@@ -570,12 +584,23 @@ def override_deal(request: ApproveRequest) -> dict:
     record_history(supabase, current_record["id"], request.deal_name, request.lender_name,
                   "HUMAN_OVERRIDE", previous_decision, new_decision, override_reason)
 
+    # Route to CRM using the CRM adapter with the overridden decision
+    crm_result = route_deal_to_crm(supabase, current_record["id"], request.deal_name, request.lender_name,
+                                    {**current_record, "human_decision": new_decision, "effective_decision": new_decision})
+
     return {
         "status": "OVERRIDDEN",
         "deal_name": request.deal_name,
         "lender_name": request.lender_name,
         "human_decision": new_decision,
+        "effective_decision": new_decision,
         "override_reason": override_reason,
+        "crm_routing": {
+            "success": crm_result.success,
+            "provider": crm_result.provider,
+            "record_id": crm_result.record_id,
+            "error": crm_result.error,
+        },
     }
 
 

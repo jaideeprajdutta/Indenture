@@ -76,7 +76,7 @@ class HubSpotAdapter(CRMAdapter):
     
     def _build_hubspot_properties(self, deal_data: dict) -> dict:
         """Build HubSpot deal properties from Indenture deal data."""
-        effective_decision = deal_data.get("human_decision") or deal_data.get("ai_decision")
+        effective_decision = deal_data.get("effective_decision") or deal_data.get("human_decision") or deal_data.get("ai_decision")
         
         properties = {
             "dealname": deal_data.get("deal_name", "Unnamed Deal"),
@@ -224,7 +224,8 @@ def route_deal_to_crm(supabase, deal_queue_id: int, deal_name: str, lender_name:
     adapter = get_crm_adapter()
     
     # Prepare deal data for CRM
-    effective_decision = deal_data.get("human_decision") or deal_data.get("ai_decision")
+    # Use explicit effective_decision if set, otherwise fall back to human_decision or ai_decision
+    effective_decision = deal_data.get("effective_decision") or deal_data.get("human_decision") or deal_data.get("ai_decision")
     
     crm_payload = {
         "deal_name": deal_name,
