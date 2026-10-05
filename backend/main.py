@@ -90,6 +90,7 @@ class SimulateDealRequest(BaseModel):
     revenue: Optional[float] = None
     source: str = "simulated"
     context_text: str
+    website: Optional[str] = None
 
 
 class MandateSandboxRequest(BaseModel):
@@ -137,6 +138,7 @@ def evaluate_deal_webhook() -> dict:
             "ebitda": normalized_deal.get("ebitda"),
             "leverage": normalized_deal.get("leverage"),
             "source": deal.get("source", "webhook"),
+            "website": normalized_deal.get("website"),
             "ai_decision": evaluation.decision.value,
             "evidence": evaluation.evidence,
             "email_draft": evaluation.email_draft,
@@ -225,6 +227,7 @@ def simulate_inbound_deal(request: Optional[SimulateDealRequest] = None) -> dict
             "revenue": request.revenue,
             "source": request.source,
             "context_text": request.context_text,
+            "website": request.website,
         }
 
     eligible_lenders = filter_mandates(deal, lenders)
@@ -255,6 +258,7 @@ def simulate_inbound_deal(request: Optional[SimulateDealRequest] = None) -> dict
             "ebitda": normalized_deal.get("ebitda"),
             "leverage": normalized_deal.get("leverage"),
             "source": deal.get("source", "simulated"),
+            "website": normalized_deal.get("website"),
             "ai_decision": evaluation.decision.value,
             "evidence": evaluation.evidence,
             "email_draft": evaluation.email_draft,

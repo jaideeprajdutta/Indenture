@@ -27,6 +27,21 @@ export default function IndentureCommandCenter() {
   const [overrideReason, setOverrideReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [simulateModal, setSimulateModal] = useState<{
+    isOpen: boolean;
+    form: {
+      deal_name: string;
+      deal_size: string;
+      industry: string;
+      geography: string;
+      ebitda: string;
+      leverage: string;
+      revenue: string;
+      source: string;
+      context_text: string;
+      website: string;
+    };
+  }>({ isOpen: false, form: { deal_name: "", deal_size: "", industry: "", geography: "", ebitda: "", leverage: "", revenue: "", source: "simulated", context_text: "", website: "" } });
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [crmRouting, setCrmRouting] = useState<{loading: boolean; error: string | null} | null>(null);
@@ -212,14 +227,39 @@ const handleRouteToCrm = async () => {
     }
   };
 
-  const handleSimulate = async () => {
+  const handleSimulate = () => {
+    setSimulateModal({
+      isOpen: true,
+      form: { deal_name: "", deal_size: "", industry: "", geography: "", ebitda: "", leverage: "", revenue: "", source: "simulated", context_text: "", website: "" }
+    });
+  };
+
+  const submitSimulation = async () => {
+    const form = simulateModal.form;
+    if (!form.deal_name.trim() || !form.context_text.trim()) {
+      alert("Deal name and context are required");
+      return;
+    }
     setIsSimulating(true);
     try {
       const res = await fetch(`${backendUrl}/deals/simulate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deal_name: form.deal_name,
+          deal_size: form.deal_size ? parseFloat(form.deal_size) : undefined,
+          industry: form.industry || undefined,
+          geography: form.geography || undefined,
+          ebitda: form.ebitda ? parseFloat(form.ebitda) : undefined,
+          leverage: form.leverage ? parseFloat(form.leverage) : undefined,
+          revenue: form.revenue ? parseFloat(form.revenue) : undefined,
+          source: form.source,
+          context_text: form.context_text,
+          website: form.website || undefined,
+        }),
       });
       if (!res.ok) throw new Error("Simulation failed");
+      setSimulateModal({ isOpen: false, form: { deal_name: "", deal_size: "", industry: "", geography: "", ebitda: "", leverage: "", revenue: "", source: "simulated", context_text: "", website: "" } });
       await fetchDeals(true);
     } catch (err: any) {
       console.error("Simulate error:", err);
@@ -277,6 +317,137 @@ const handleRouteToCrm = async () => {
             >
               {isSubmitting ? "Processing..." : "Confirm Override"}
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Simulate Modal
+  if (simulateModal.isOpen) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+        <div className="bg-zinc-900 border border-zinc-700 rounded p-5 w-full max-w-lg mx-4 max-h-[80vh] overflow-y-auto">
+          <h3 className="text-base font-semibold text-white mb-4">Simulate Inbound Deal</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Deal Name *</label>
+              <input
+                type="text"
+                value={simulateModal.form.deal_name}
+                onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, deal_name: e.target.value}})}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                placeholder="e.g., Project Phoenix"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">Context *</label>
+              <textarea
+                value={simulateModal.form.context_text}
+                onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, context_text: e.target.value}})}
+                rows={3}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                placeholder="Describe the deal, financials, situation..."
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Deal Size ($)</label>
+                <input
+                  type="number"
+                  value={simulateModal.form.deal_size}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, deal_size: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="50000000"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">EBITDA ($)</label>
+                <input
+                  type="number"
+                  value={simulateModal.form.ebitda}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, ebitda: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="12000000"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Leverage (x)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={simulateModal.form.leverage}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, leverage: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="2.5"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Revenue ($)</label>
+                <input
+                  type="number"
+                  value={simulateModal.form.revenue}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, revenue: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="optional"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Industry</label>
+                <input
+                  type="text"
+                  value={simulateModal.form.industry}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, industry: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="Healthcare Technology"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Geography</label>
+                <input
+                  type="text"
+                  value={simulateModal.form.geography}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, geography: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="USA"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Source</label>
+                <input
+                  type="text"
+                  value={simulateModal.form.source}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, source: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="simulated"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">Website (optional)</label>
+                <input
+                  type="text"
+                  value={simulateModal.form.website}
+                  onChange={(e) => setSimulateModal({...simulateModal, form: {...simulateModal.form, website: e.target.value}})}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="https://company.com"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end pt-2 border-t border-zinc-800">
+              <button
+                onClick={() => setSimulateModal({ isOpen: false, form: { deal_name: "", deal_size: "", industry: "", geography: "", ebitda: "", leverage: "", revenue: "", source: "simulated", context_text: "", website: "" } })}
+                className="px-3 py-1.5 rounded bg-zinc-800 text-zinc-300 font-medium hover:bg-zinc-700 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitSimulation}
+                disabled={isSimulating || !simulateModal.form.deal_name.trim() || !simulateModal.form.context_text.trim()}
+                className="px-3 py-1.5 rounded bg-emerald-600 text-white font-medium hover:bg-emerald-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSimulating ? "Simulating..." : "Simulate Deal"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -453,6 +624,12 @@ const handleRouteToCrm = async () => {
                     <span>{selectedDeal.source || "webhook"}</span>
                     <span>{selectedDeal.geography || "—"}</span>
                     <span>{selectedDeal.industry || "—"}</span>
+                    {selectedDeal.website && (
+                      <a href={selectedDeal.website} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:underline flex items-center gap-1">
+                        <Globe className="w-3 h-3" />
+                        {selectedDeal.website}
+                      </a>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
