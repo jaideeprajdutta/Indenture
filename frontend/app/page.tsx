@@ -480,6 +480,17 @@ const handleRouteToCrm = async () => {
     }
   };
 
+  const getDecisionConfig = (decision: string) => {
+    const normalized = decision?.toUpperCase() === "HOLD_MISSING_DATA" ? "HOLD" : decision?.toUpperCase();
+    switch (normalized) {
+      case "ADVANCE": return { bg: "bg-emerald-950/40", border: "border-emerald-800/60", text: "text-emerald-400" };
+      case "HOLD": return { bg: "bg-amber-950/40", border: "border-amber-800/60", text: "text-amber-400" };
+      case "NURTURE": return { bg: "bg-blue-950/40", border: "border-blue-800/60", text: "text-blue-400" };
+      case "REJECT": return { bg: "bg-rose-950/40", border: "border-rose-800/60", text: "text-rose-400" };
+      default: return { bg: "bg-zinc-900/40", border: "border-zinc-700/60", text: "text-zinc-400" };
+    }
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-[#07080B] flex items-center justify-center p-6 text-zinc-100 font-sans">
@@ -1021,11 +1032,69 @@ const handleRouteToCrm = async () => {
                          </div>
                        </div>
                      </div>
-                   </div>
-                 </div>
-               )}
+</div>
+                  </div>
+                )}
 
-               {/* Decision History */}
+                {/* AI Re-evaluation */}
+                {selectedDeal.ai_reevaluation && (
+                  <div className="pt-3 border-t border-zinc-800">
+                    <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5" />
+                      AI Re-evaluation
+                    </h3>
+                    <div className="bg-zinc-900/50 border border-zinc-800 p-3 rounded">
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-400 uppercase tracking-wider">Previous Decision</span>
+                          <div className="mt-1 text-sm">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getDecisionConfig(selectedDeal.ai_reevaluation.previous_decision).bg} ${getDecisionConfig(selectedDeal.ai_reevaluation.previous_decision).border} ${getDecisionConfig(selectedDeal.ai_reevaluation.previous_decision).text}`}>
+                              {selectedDeal.ai_reevaluation.previous_decision}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-xs text-zinc-500 whitespace-pre-wrap max-h-24 overflow-auto">
+                            {selectedDeal.ai_reevaluation.previous_evidence || "No evidence recorded."}
+                          </div>
+                        </div>
+                        <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                          <span className="text-xs text-zinc-400 uppercase tracking-wider">New Decision</span>
+                          <div className="mt-1 text-sm">
+                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${getDecisionConfig(selectedDeal.ai_reevaluation.decision).bg} ${getDecisionConfig(selectedDeal.ai_reevaluation.decision).border} ${getDecisionConfig(selectedDeal.ai_reevaluation.decision).text}`}>
+                              {selectedDeal.ai_reevaluation.decision}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-xs text-zinc-500 whitespace-pre-wrap max-h-24 overflow-auto">
+                            {selectedDeal.ai_reevaluation.evidence || "No evidence recorded."}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {selectedDeal.ai_reevaluation.missing_info && (
+                        <div className="mb-3 p-2.5 bg-amber-950/20 border border-amber-800/50 rounded">
+                          <span className="text-xs text-amber-400 font-medium">Missing Info:</span>
+                          <div className="text-sm text-amber-300 mt-1 whitespace-pre-wrap">{selectedDeal.ai_reevaluation.missing_info}</div>
+                        </div>
+                      )}
+                      
+                      {selectedDeal.ai_reevaluation.next_best_action && (
+                        <div className="mb-3 p-2.5 bg-blue-950/20 border border-blue-800/50 rounded">
+                          <span className="text-xs text-blue-400 font-medium">Next Best Action:</span>
+                          <div className="text-sm text-blue-300 mt-1 whitespace-pre-wrap">{selectedDeal.ai_reevaluation.next_best_action}</div>
+                        </div>
+                      )}
+                      
+                      {selectedDeal.ai_reevaluation.decision !== selectedDeal.ai_reevaluation.previous_decision && (
+                        <div className="p-2.5 rounded bg-emerald-950/40 border border-emerald-800/60">
+                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                            Decision Changed: {selectedDeal.ai_reevaluation.previous_decision} → {selectedDeal.ai_reevaluation.decision}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Decision History */}
               <div className="pt-3 border-t border-zinc-800">
                 <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5" />

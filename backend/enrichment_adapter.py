@@ -19,6 +19,7 @@ class EnrichmentResult:
     error: Optional[str] = None
     confidence: Optional[float] = None
     mandate_reevaluation: Optional[dict] = None
+    ai_reevaluation: Optional[dict] = None
 
 
 class EnrichmentProvider:
@@ -417,9 +418,10 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
     Returns:
         EnrichmentResult with success/failure and enriched data if successful
     """
-    # First, capture the original mandate checks
+    # First, capture the original mandate checks and original AI decision
     from main import get_supabase_client
-    from services import evaluate_mandate_checks, compare_mandate_checks
+    from services import evaluate_mandate_checks, compare_mandate_checks, evaluate_qualitative_fit
+    from schemas import Decision
     
     # Get lender data to evaluate mandates
     data_path = Path(__file__).parent / "data.json"
@@ -427,6 +429,8 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
     current_lender = next((l for l in payload["lenders"] if l["name"] == lender_name), None)
     
     original_mandate_checks = None
+    original_ai_decision = deal_data.get("ai_decision")
+    original_evidence = deal_data.get("evidence")
     if current_lender:
         original_mandate_checks = evaluate_mandate_checks(deal_data, current_lender)
     
@@ -435,6 +439,7 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
     result = provider.enrich_deal(deal_data)
     
     mandate_reevaluation = None
+    ai_reevaluation = None
     
     try:
         if result.success and result.data:
@@ -452,6 +457,50 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
                     supabase.table("deal_queue").update({
                         "mandate_reevaluation": mandate_reevaluation,
                     }).eq("id", deal_queue_id).execute()
+            
+            # Run AI re-evaluation with enriched data
+            if current_lender:
+                try:
+                    ai_eval = evaluate_qualitative_fit(enriched_deal, current_lender)
+                    new_decision = ai_eval.decision.value
+                    ai_reevaluation = {
+                        "decision": new_decision,
+                        "evidence": ai_eval.evidence,
+                        "email_draft": ai_eval.email_draft,
+                        "missing_info": ai_eval.missing_info,
+                        "next_best_action": ai_eval.next_best_action,
+                        "previous_decision": original_ai_decision,
+                        "previous_evidence": original_evidence,
+                    }
+                    
+                    # Update deal_queue with new AI decision
+                    supabase.table("deal_queue").update({
+                        "ai_decision": new_decision,
+                        "evidence": ai_eval.evidence,
+                        "email_draft": ai_eval.email_draft,
+                        "missing_info": ai_eval.missing_info,
+                        "next_best_action": ai_eval.next_best_action,
+                        "ai_reevaluation": ai_reevaluation,
+                    }).eq("id", deal_queue_id).execute()
+                    
+                    # Record AI re-evaluation in history
+                    from main import record_history
+                    reason = f"AI re-evaluation after enrichment. Previous: {original_ai_decision} → New: {new_decision}"
+                    if mandate_reevaluation and mandate_reevaluation.get("eligibility_changed"):
+                        reason += f" (Mandate eligibility changed: {mandate_reevaluation.get('was_eligible')} → {mandate_reevaluation.get('now_eligible')})"
+                    
+                    record_history(
+                        supabase=supabase,
+                        deal_queue_id=deal_queue_id,
+                        deal_name=deal_name,
+                        lender_name=lender_name,
+                        event_type="AI_REEVALUATION",
+                        previous_decision=original_ai_decision,
+                        new_decision=new_decision,
+                        reason=reason,
+                    )
+                except Exception as e:
+                    print(f"Warning: AI re-evaluation failed: {e}")
             
             supabase.table("deal_queue").update({
                 "enrichment_status": "ENRICHED",
@@ -490,4 +539,5 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
         print(f"Warning: Failed to record enrichment history: {e}")
     
     result.mandate_reevaluation = mandate_reevaluation
+    result.ai_reevaluation = ai_reevaluation
     return result
