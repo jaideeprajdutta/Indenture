@@ -5,7 +5,7 @@ from typing import Optional
 import requests
 from groq import Groq
 
-from schemas import DealEvaluation
+from schemas import DealEvaluation, MandateCheck, MandateReevaluation
 
 
 def normalize_deal_for_mandates(deal: dict) -> dict:
@@ -176,3 +176,55 @@ def push_to_crm(deal_name: str, status: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
+def evaluate_mandate_checks(deal: dict, lender: dict) -> MandateCheck:
+    """Evaluate mandate checks for a deal against a lender."""
+    ebitda = deal.get("ebitda") or 0
+    leverage = deal.get("leverage") or 999
+    geography = deal.get("geography") or ""
+    
+    ebitda_check = ebitda >= lender.get("min_ebitda", 0)
+    leverage_check = leverage <= lender.get("max_leverage", 999)
+    geography_check = geography in lender.get("allowed_geography", [])
+    
+    return MandateCheck(
+        ebitda_check=ebitda_check,
+        leverage_check=leverage_check,
+        geography_check=geography_check,
+        eligible=ebitda_check and leverage_check and geography_check
+    )
+
+
+def compare_mandate_checks(before: MandateCheck, after: MandateCheck) -> MandateReevaluation:
+    """Compare before/after mandate checks and identify changes."""
+    checks = ["ebitda_check", "leverage_check", "geography_check"]
+    before_dict = before.model_dump()
+    after_dict = after.model_dump()
+    
+    newly_satisfied = []
+    newly_failed = []
+    unchanged = []
+    
+    for check in checks:
+        before_val = before_dict[check]
+        after_val = after_dict[check]
+        if not before_val and after_val:
+            newly_satisfied.append(check)
+        elif before_val and not after_val:
+            newly_failed.append(check)
+        else:
+            unchanged.append(check)
+    
+    eligibility_changed = before.eligible != after.eligible
+    
+    return MandateReevaluation(
+        before=before,
+        after=after,
+        newly_satisfied=newly_satisfied,
+        newly_failed=newly_failed,
+        unchanged=unchanged,
+        eligibility_changed=eligibility_changed,
+        was_eligible=before.eligible,
+        now_eligible=after.eligible
+    )

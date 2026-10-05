@@ -1,10 +1,12 @@
 """Enrichment Adapter - Abstract interface for deal enrichment providers"""
 
 import os
+import json
 import requests
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
+from pathlib import Path
 import hashlib
 
 
@@ -16,6 +18,7 @@ class EnrichmentResult:
     data: Optional[dict] = None
     error: Optional[str] = None
     confidence: Optional[float] = None
+    mandate_reevaluation: Optional[dict] = None
 
 
 class EnrichmentProvider:
@@ -414,12 +417,42 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
     Returns:
         EnrichmentResult with success/failure and enriched data if successful
     """
+    # First, capture the original mandate checks
+    from main import get_supabase_client
+    from services import evaluate_mandate_checks, compare_mandate_checks
+    
+    # Get lender data to evaluate mandates
+    data_path = Path(__file__).parent / "data.json"
+    payload = json.loads(data_path.read_text(encoding="utf-8"))
+    current_lender = next((l for l in payload["lenders"] if l["name"] == lender_name), None)
+    
+    original_mandate_checks = None
+    if current_lender:
+        original_mandate_checks = evaluate_mandate_checks(deal_data, current_lender)
+    
     provider = get_enrichment_provider()
     
     result = provider.enrich_deal(deal_data)
     
+    mandate_reevaluation = None
+    
     try:
         if result.success and result.data:
+            # Merge enriched data with deal_data for mandate re-evaluation
+            enriched_deal = {**deal_data, **result.data}
+            
+            # Re-evaluate mandates with enriched data
+            if current_lender:
+                new_mandate_checks = evaluate_mandate_checks(enriched_deal, current_lender)
+                if original_mandate_checks:
+                    reevaluation = compare_mandate_checks(original_mandate_checks, new_mandate_checks)
+                    mandate_reevaluation = reevaluation.model_dump()
+                    
+                    # Store mandate re-evaluation in deal_queue
+                    supabase.table("deal_queue").update({
+                        "mandate_reevaluation": mandate_reevaluation,
+                    }).eq("id", deal_queue_id).execute()
+            
             supabase.table("deal_queue").update({
                 "enrichment_status": "ENRICHED",
                 "enrichment_source": provider.provider_name,
@@ -456,4 +489,5 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
     except Exception as e:
         print(f"Warning: Failed to record enrichment history: {e}")
     
+    result.mandate_reevaluation = mandate_reevaluation
     return result

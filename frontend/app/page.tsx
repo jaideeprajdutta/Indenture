@@ -930,11 +930,102 @@ const handleRouteToCrm = async () => {
                           Enrichment failed - check Decision History for details
                         </div>
                       )}
-                  </div>
-                </div>
-              )}
+                   </div>
+                 </div>
+               )}
 
-              {/* Decision History */}
+               {/* Mandate Re-evaluation */}
+               {selectedDeal.mandate_reevaluation && (
+                 <div className="pt-3 border-t border-zinc-800">
+                   <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                     <ShieldAlert className="w-3.5 h-3.5" />
+                     Mandate Re-evaluation
+                   </h3>
+                   <div className="bg-zinc-900/50 border border-zinc-800 p-3 rounded">
+                     <div className="grid grid-cols-2 gap-4 mb-3">
+                       <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                         <span className="text-xs text-zinc-400 uppercase tracking-wider">Before</span>
+                         <div className="flex flex-col gap-1 mt-1 text-sm">
+                           <span className={`flex items-center gap-1.5 ${selectedDeal.mandate_reevaluation.before.ebitda_check ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             EBITDA Check
+                           </span>
+                           <span className={`flex items-center gap-1.5 ${selectedDeal.mandate_reevaluation.before.leverage_check ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             Leverage Check
+                           </span>
+                           <span className={`flex items-center gap-1.5 ${selectedDeal.mandate_reevaluation.before.geography_check ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             Geography Check
+                           </span>
+                           <span className={`flex items-center gap-1.5 font-bold ${selectedDeal.mandate_reevaluation.before.eligible ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             Eligible: {selectedDeal.mandate_reevaluation.before.eligible ? "YES" : "NO"}
+                           </span>
+                         </div>
+                       </div>
+                       <div className="p-2.5 bg-zinc-900/50 border border-zinc-800 rounded">
+                         <span className="text-xs text-zinc-400 uppercase tracking-wider">After Enrichment</span>
+                         <div className="flex flex-col gap-1 mt-1 text-sm">
+                           <span className={`flex items-center gap-1.5 ${selectedDeal.mandate_reevaluation.after.ebitda_check ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             EBITDA Check
+                           </span>
+                           <span className={`flex items-center gap-1.5 ${selectedDeal.mandate_reevaluation.after.leverage_check ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             Leverage Check
+                           </span>
+                           <span className={`flex items-center gap-1.5 ${selectedDeal.mandate_reevaluation.after.geography_check ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             Geography Check
+                           </span>
+                           <span className={`flex items-center gap-1.5 font-bold ${selectedDeal.mandate_reevaluation.after.eligible ? "text-emerald-400" : "text-rose-400"}`}>
+                             <CheckCircle2 className="w-3 h-3" />
+                             Eligible: {selectedDeal.mandate_reevaluation.after.eligible ? "YES" : "NO"}
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                     
+                     {selectedDeal.mandate_reevaluation.eligibility_changed && (
+                       <div className={`p-2.5 rounded ${selectedDeal.mandate_reevaluation.now_eligible ? "bg-emerald-950/40 border border-emerald-800/60" : "bg-rose-950/40 border border-rose-800/60"}`}>
+                         <span className="text-xs font-bold uppercase tracking-wider">
+                           {selectedDeal.mandate_reevaluation.now_eligible ? "✓ NOW ELIGIBLE" : "✗ NO LONGER ELIGIBLE"}
+                         </span>
+                       </div>
+                     )}
+                     
+                     <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-zinc-800">
+                       <div>
+                         <span className="text-xs text-emerald-400 font-medium">Newly Satisfied</span>
+                         <div className="text-sm text-zinc-300 font-mono mt-1">
+                           {selectedDeal.mandate_reevaluation.newly_satisfied.length > 0 
+                             ? selectedDeal.mandate_reevaluation.newly_satisfied.map((s: string) => s.replace("_check", "").replace("_", " ")).join(", ")
+                             : "—"}
+                         </div>
+                       </div>
+                       <div>
+                         <span className="text-xs text-rose-400 font-medium">Newly Failed</span>
+                         <div className="text-sm text-zinc-300 font-mono mt-1">
+                           {selectedDeal.mandate_reevaluation.newly_failed.length > 0 
+                             ? selectedDeal.mandate_reevaluation.newly_failed.map((s: string) => s.replace("_check", "").replace("_", " ")).join(", ")
+                             : "—"}
+                         </div>
+                       </div>
+                       <div>
+                         <span className="text-xs text-zinc-400 font-medium">Unchanged</span>
+                         <div className="text-sm text-zinc-300 font-mono mt-1">
+                           {selectedDeal.mandate_reevaluation.unchanged.length > 0 
+                             ? selectedDeal.mandate_reevaluation.unchanged.map((s: string) => s.replace("_check", "").replace("_", " ")).join(", ")
+                             : "—"}
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+               {/* Decision History */}
               <div className="pt-3 border-t border-zinc-800">
                 <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <Activity className="w-3.5 h-3.5" />

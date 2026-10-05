@@ -612,6 +612,7 @@ def enrich_deal_endpoint(deal_id: int, request: EnrichDealRequest) -> dict:
         "provider": result.provider,
         "confidence": result.confidence,
         "error": result.error,
+        "mandate_reevaluation": result.mandate_reevaluation,
         "deal": updated.data[0] if updated.data else None,
     }
 def route_deal_to_crm_endpoint(deal_id: int, request: RouteToCRMRequest) -> dict:
