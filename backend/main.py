@@ -661,3 +661,9 @@ def route_deal_to_crm_endpoint(deal_id: int, request: RouteToCRMRequest) -> dict
         "record_id": result.record_id,
         "error": result.error,
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

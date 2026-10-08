@@ -245,7 +245,7 @@ GET /mandate-sandbox/lenders
 - Groq API key
 - Optional: Apollo API key, HubSpot access token
 
-### Backend
+### Backend (Local Development)
 
 ```bash
 cd backend
@@ -264,7 +264,7 @@ Run `supabase/schema.sql` in Supabase SQL editor to create:
 - `deal_history` table
 - Indexes
 
-### Frontend
+### Frontend (Local Development)
 
 ```bash
 cd frontend
@@ -272,9 +272,120 @@ npm install
 # Create .env.local with:
 # NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 # NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-# NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+# NEXT_PUBLIC_API_URL=http://localhost:8000
 npm run dev
 ```
+
+---
+
+## Production Deployment
+
+### Architecture Overview
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Vercel        │────▶│   Render        │────▶│   Supabase      │
+│   (Frontend)    │     │   (Backend)     │     │   (Database)    │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
+                                 │
+                    ┌────────────┼────────────┐
+                    ▼            ▼            ▼
+               ┌─────────┐  ┌──────────┐  ┌──────────┐
+               │  Groq   │  │ Apollo   │  │ HubSpot  │
+               │  (LLM)  │  │(Enrich)  │  │  (CRM)   │
+               └─────────┘  └──────────┘  └──────────┘
+```
+
+### Backend Deployment (Render)
+
+1. **Create a new Web Service on Render**
+   - Connect your GitHub repository
+   - Root Directory: `backend`
+   - Runtime: Python 3.11+
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `python main.py` (uses PORT env var automatically)
+
+2. **Configure Environment Variables on Render**
+   | Variable | Required | Description |
+   |----------|----------|-------------|
+   | `GROQ_API_KEY` | Yes | Groq API key for LLM |
+   | `SUPABASE_URL` | Yes | `https://your-project.supabase.co` |
+   | `SUPABASE_KEY` | Yes | Service role or anon key |
+   | `BACKEND_CORS_ORIGINS` | Yes | Production Vercel URL (e.g., `https://your-app.vercel.app`) |
+   | `APOLLO_ENABLED` | No | `"true"` to enable Apollo enrichment |
+   | `APOLLO_API_KEY` | If Apollo enabled | Apollo.io API key |
+   | `ENRICHMENT_DEMO_ENABLED` | No | `"true"` (default) for demo provider |
+   | `HUBSPOT_ENABLED` | No | `"true"` to enable HubSpot CRM |
+   | `HUBSPOT_ACCESS_TOKEN` | If HubSpot enabled | HubSpot private app token |
+   | `PORT` | No | Render sets automatically (default 8000) |
+
+3. **Important Notes**
+   - The backend binds to `0.0.0.0` and reads `PORT` from environment (set by Render)
+   - `BACKEND_CORS_ORIGINS` must include your Vercel frontend URL (comma-separated for multiple)
+   - HubSpot runs in **simulated mode** by default (`HUBSPOT_ENABLED=false`)
+   - Apollo requires valid real company domains; demo provider used as fallback
+
+### Frontend Deployment (Vercel)
+
+1. **Create a new Vercel Project**
+   - Import your GitHub repository
+   - Framework Preset: Next.js
+   - Root Directory: `frontend`
+   - Build Command: `npm run build` (default)
+   - Output Directory: `.next` (default)
+
+2. **Configure Environment Variables on Vercel**
+   | Variable | Required | Description |
+   |----------|----------|-------------|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
+   | `NEXT_PUBLIC_API_URL` | Yes | Deployed Render backend URL (e.g., `https://your-backend.onrender.com`) |
+
+3. **Important Notes**
+   - `NEXT_PUBLIC_API_URL` must point to your Render backend (no trailing slash)
+   - Frontend uses Supabase directly for real-time data; API calls go to Render backend
+   - No build-time secrets needed; all `NEXT_PUBLIC_*` vars are client-safe
+
+### Supabase Setup (Production)
+
+1. Create a new Supabase project (or use existing)
+2. Run `supabase/schema.sql` in the SQL Editor
+3. Enable Row Level Security if needed (currently open for demo)
+4. Get Project URL and anon key from Settings → API
+5. Add these to both Render (backend) and Vercel (frontend) environment variables
+
+### Safe Simulated HubSpot Mode
+
+- **Default**: `HUBSPOT_ENABLED=false` — no real API calls, returns `SIM-<timestamp>` record IDs
+- **Real mode**: Set `HUBSPOT_ENABLED=true` and provide `HUBSPOT_ACCESS_TOKEN` (HubSpot Private App token with `crm.objects.deals.write` scope)
+- Simulated mode is safe for public demos — no external credentials required
+- Real HubSpot routing has **not been tested in production**; enable at your own risk
+
+### Optional Real Apollo/HubSpot Configuration
+
+**Apollo Enrichment:**
+- Set `APOLLO_ENABLED=true` and `APOLLO_API_KEY` on Render
+- Requires valid company website with real domain (e.g., `https://stripe.com`)
+- Strict domain validation rejects: `localhost`, `test.*`, `demo.*`, `fake.*`, synthetic domains
+- Falls back to demo provider if disabled or domain invalid
+
+**HubSpot CRM:**
+- Set `HUBSPOT_ENABLED=true` and `HUBSPOT_ACCESS_TOKEN` on Render
+- Creates deals with custom properties: `indenture_lender`, `indenture_ebitda`, etc.
+- Maps decisions to stages: ADVANCE→appointmentscheduled, HOLD→qualifiedtobuy, NURTURE→presentationscheduled, REJECT→closedlost
+
+### Demo Workflow (Production)
+
+1. Open your Vercel frontend URL
+2. Click **+ Simulate** → fill Deal Name, Context, optional financials + website
+3. Deal appears in queue with AI decision (ADVANCE/HOLD/NURTURE/REJECT)
+4. Click deal → inspect mandate checks, evidence, email draft, missing info
+5. **Enrich Deal** → demo provider adds synthetic data; Apollo adds real data if configured
+6. Observe Mandate Re-evaluation and AI Re-evaluation panels
+7. **Approve & Advance** → confirms AI decision, routes to CRM (simulated by default)
+8. **Override** → choose new decision + reason, routes to CRM with overridden decision
+9. Visit `/analytics` for aggregated metrics and deal log
+10. Visit `/sandbox` to simulate mandate changes against historical deals
 
 ### Environment Variables
 
@@ -290,14 +401,14 @@ npm run dev
 | `ENRICHMENT_DEMO_ENABLED` | No | "true" (default) for demo provider |
 | `HUBSPOT_ENABLED` | No | "true" to enable HubSpot |
 | `HUBSPOT_ACCESS_TOKEN` | If HubSpot enabled | HubSpot private app token |
-| `ATTIO_API_KEY` | No | Legacy, not used in current flow |
+| `PORT` | No | Default: 8000 (Render sets automatically) |
 
 **Frontend (.env.local)**
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
-| `NEXT_PUBLIC_BACKEND_URL` | No | Default: http://localhost:8000 |
+| `NEXT_PUBLIC_API_URL` | No | Default: http://localhost:8000 |
 
 ## Demo Instructions
 

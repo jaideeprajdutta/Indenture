@@ -13,7 +13,7 @@ import {
 // Initialize Supabase safely
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 export default function IndentureCommandCenter() {
