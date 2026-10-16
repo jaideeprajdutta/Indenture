@@ -3,25 +3,318 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #07080b;
+  --foreground: #f0f1f3;
+  --surface: #0b0c10;
+  --surface-elevated: #101216;
+  --surface-sunken: #050608;
+  --border: #1f2328;
+  --border-strong: #2d333b;
+
+  --primary: #1faa59;
+  --primary-hover: #1db85d;
+  --primary-foreground: #07080b;
+
+  --success: #1faa59;
+  --success-hover: #1db85d;
+  --success-foreground: #07080b;
+  --success-muted: rgba(31, 170, 89, 0.15);
+
+  --warning: #e8a01e;
+  --warning-hover: #f0b02a;
+  --warning-foreground: #07080b;
+  --warning-muted: rgba(232, 160, 30, 0.15);
+
+  --danger: #e84d3a;
+  --danger-hover: #f06554;
+  --danger-foreground: #ffffff;
+  --danger-muted: rgba(232, 77, 58, 0.15);
+
+  --info: #3b82f6;
+  --info-hover: #5a95f7;
+  --info-foreground: #ffffff;
+  --info-muted: rgba(59, 130, 246, 0.15);
+
+  --muted: #1f2328;
+  --muted-foreground: #7d848e;
+
+  --font-sans: "Geist VF", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono VF", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --focus-ring: var(--primary);
+  --focus-ring-offset: var(--background);
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --surface: #ffffff;
+    --surface-elevated: #f1f5f9;
+    --surface-sunken: #e2e8f0;
+    --border: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --primary: #15803d;
+    --primary-hover: #16a34a;
+    --primary-foreground: #ffffff;
+    --success: #15803d;
+    --success-hover: #16a34a;
+    --success-foreground: #ffffff;
+    --success-muted: rgba(21, 128, 61, 0.12);
+    --warning: #b45309;
+    --warning-hover: #ca8a04;
+    --warning-foreground: #ffffff;
+    --warning-muted: rgba(180, 83, 9, 0.12);
+    --danger: #b91c1c;
+    --danger-hover: #dc2626;
+    --danger-foreground: #ffffff;
+    --danger-muted: rgba(185, 28, 28, 0.12);
+    --info: #2563eb;
+    --info-hover: #3b82f6;
+    --info-foreground: #ffffff;
+    --info-muted: rgba(37, 99, 235, 0.12);
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --focus-ring: var(--primary);
+    --focus-ring-offset: var(--background);
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.3;
+    color: var(--foreground);
+  }
+
+  p {
+    margin: 0 0 1rem;
+  }
+
+  a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  a:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
+  }
+
+  a:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--focus-ring), 0 0 0 4px var(--focus-ring-offset);
+    border-radius: 0.25rem;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 0.375rem);
+    padding: 0.5rem 0.75rem;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--focus-ring);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted-foreground);
+  }
+
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+  }
+
+  pre {
+    margin: 0;
+    padding: 1rem;
+    background-color: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  code:not(pre code) {
+    padding: 0.125rem 0.375rem;
+    background-color: var(--muted);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    font-weight: 500;
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    background-color: var(--surface);
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--surface);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
+
+@layer components {
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .transition-fast {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .transition-normal {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) var(--surface);
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .animate-in {
+    animation: animateIn 200ms ease-out;
+  }
+
+  .animate-out {
+    animation: animateOut 150ms ease-in;
+  }
+
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes animateOut {
+    from {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }
