@@ -2,7 +2,7 @@
 
 import React, { useCallback } from "react";
 import { Plus, RefreshCw, Activity, Database, Settings } from "lucide-react";
-import { PageShell, PageContent, SplitPane } from "@/components/layout";
+import { PageShell, PageContent, ResponsiveSplitPane } from "@/components/layout";
 import { PageHeader, ActionBar, FilterTabs } from "@/components/layout";
 import { DealQueue, DealInspector } from "@/components/triage";
 import { Button } from "@/components/ui";
@@ -270,7 +270,7 @@ export default function IndentureCommandCenter() {
         </div>
       </ActionBar>
       <PageContent>
-        <SplitPane
+        <ResponsiveSplitPane
           left={
             <div className="h-full overflow-y-auto p-3 bg-surface">
               <DealQueue
@@ -299,6 +299,7 @@ export default function IndentureCommandCenter() {
           leftWidth={360}
           minLeftWidth={320}
           maxLeftWidth={440}
+          onMobileDetailClose={() => setSelectedDeal(null)}
         />
       </PageContent>
 
@@ -382,7 +383,7 @@ export default function IndentureCommandCenter() {
             placeholder="Describe the deal, financials, situation..."
             fullWidth
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Deal Size ($)"
               type="number"

@@ -270,51 +270,93 @@
 }
 
 @layer utilities {
-  .animate-in {
-    animation: animateIn 200ms ease-out;
+  /* Mobile touch targets */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
   }
 
-  .animate-out {
-    animation: animateOut 150ms ease-in;
+  /* Prevent horizontal overflow on mobile */
+  .mobile-safe {
+    @apply max-w-full overflow-x-hidden;
   }
 
-  @keyframes animateIn {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+  /* Responsive table container */
+  .table-container {
+    @apply overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
   }
 
-  @keyframes animateOut {
-    from {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    to {
-      opacity: 0;
-      transform: translateY(-4px);
-    }
+  /* Sticky header for modals on mobile */
+  .modal-sticky-header {
+    @apply sticky top-0 z-10 bg-surface border-b border-border;
   }
+}
 
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+@media (max-width: 640px) {
+  /* Ensure modals are full-width on mobile with small margins */
+  .modal-mobile {
+    @apply max-w-[calc(100vw-1rem)] mx-auto;
   }
+  
+  /* Stack grid items on mobile */
+  .mobile-stack {
+    @apply grid-cols-1;
+  }
+  
+  /* Reduce padding on mobile */
+  .mobile-padding {
+    @apply px-3 py-2;
+  }
+  
+  /* Ensure text wraps on mobile */
+  .mobile-wrap {
+    @apply break-words;
+  }
+}
 
-  .animate-spin {
-    animation: spin 1s linear infinite;
-  }
+.animate-in {
+  animation: animateIn 200ms ease-out;
+}
 
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
+.animate-out {
+  animation: animateOut 150ms ease-in;
+}
 
-  .animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+@keyframes animateIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes animateOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

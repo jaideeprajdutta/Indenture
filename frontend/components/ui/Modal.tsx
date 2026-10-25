@@ -24,7 +24,7 @@ const sizeStyles: Record<ModalSize, string> = {
   md: "max-w-lg",
   lg: "max-w-2xl",
   xl: "max-w-4xl",
-  full: "max-w-[90vw]",
+  full: "max-w-[95vw]",
 };
 
 export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
@@ -86,12 +86,12 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
             className={`
               w-full ${sizeStyles[size]} bg-surface border border-border rounded-xl
               shadow-xl overflow-hidden
-              max-h-[90vh] flex flex-col
+              max-h-[90vh] max-h-[calc(100vh-2rem)] flex flex-col
             `}
             onClick={(e) => e.stopPropagation()}
           >
             {(title || showCloseButton) && (
-              <div className="flex items-start justify-between gap-4 p-4 border-b border-border">
+              <div className="flex items-start justify-between gap-4 p-4 border-b border-border flex-shrink-0">
                 <div className="flex-1 min-w-0">
                   {title && (
                     <h2 id="modal-title" className="text-heading-md text-foreground">
@@ -107,7 +107,7 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
                 {showCloseButton && (
                   <button
                     onClick={onClose}
-                    className="flex-shrink-0 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex-shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary min-w-[44px] min-h-[44px] flex items-center justify-center"
                     aria-label="Close modal"
                   >
                     <X className="w-5 h-5" />

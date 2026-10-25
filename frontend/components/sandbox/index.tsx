@@ -43,13 +43,13 @@ export function LenderSelector({ lenders, selectedLender, onChange }: { lenders:
   return (
     <Panel variant="default" padding="md">
       <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <label className="text-label-xs text-muted-foreground uppercase tracking-wider font-medium">Lender</label>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <label className="text-label-xs text-muted-foreground uppercase tracking-wider font-medium whitespace-nowrap">Lender</label>
           <Select
             value={selectedLender}
             onChange={onChange}
             options={lenders.map(l => ({ value: l.name, label: l.name }))}
-            className="w-auto min-w-[200px]"
+            className="flex-1 min-w-[200px]"
           />
         </div>
       </div>
@@ -105,7 +105,7 @@ export function MandateControls({ currentLender, form, onChange, onSimulate, onR
           onChange={(e) => onChange("allowed_industry", e.target.value)}
           placeholder="Healthcare Technology, B2B SaaS"
         />
-        <div className="flex gap-2 pt-2 border-t border-border">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border">
           <Button onClick={onSimulate} disabled={loading} className="flex-1 gap-2" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 15.632l-2.54-2.54a6 6 0 10-8.485 8.486l2.959 2.96a1 1 0 001.415 0l2.392-2.391a1 1 0 000-1.415l-2.254-2.253a4 4 0 115.657-5.657l2.539 2.54" /></svg>}>
             Run Simulation
           </Button>
@@ -138,7 +138,7 @@ export function SummaryCard({ label, value, color, icon }: SummaryCardProps) {
   return (
     <Panel variant="default" padding="md" className={c.border}>
       <p className="text-label-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">{label}</p>
-      <div className="flex items-baseline gap-1.5">
+      <div className="flex flex-col sm:flex-row sm:items-baseline gap-1">
         <p className={`text-heading-md font-bold font-mono ${c.text}`}>{value}</p>
         {icon && <span className={c.text}>{icon}</span>}
       </div>
@@ -150,14 +150,14 @@ export function DecisionDistribution({ result }: { result: SandboxResult }) {
   return (
     <Panel variant="default" padding="md">
       <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider mb-3">Simulated Decision Distribution</h3>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {["ADVANCE", "HOLD", "NURTURE", "REJECT"].map((key) => {
           const config = getDecisionConfig(key);
           const count = result.decision_distribution[key] || 0;
           return (
-            <div key={key} className={`p-2 rounded ${config.bg} ${config.border}`}>
+            <div key={key} className={`p-3 rounded ${config.bg} ${config.border}`}>
               <div className="text-label-xs font-semibold uppercase tracking-wider">{key}</div>
-              <div className={`text-heading-sm font-bold font-mono ${config.text}`}>{count}</div>
+              <div className={`text-heading-md font-bold font-mono ${config.text}`}>{count}</div>
             </div>
           );
         })}
@@ -203,34 +203,34 @@ export function DealDetailSection({ title, count, deals, icon, color, showDetail
       </button>
       {isExpanded && (
         <div className="border-t border-border p-4 overflow-x-auto">
-          <table className="w-full text-body-sm">
+          <table className="w-full text-body-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Deal</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Size</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Industry</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Geo</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">EBITDA</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Leverage</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">AI Decision</th>
-                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Checks</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Deal</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Size</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Industry</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Geo</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">EBITDA</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Leverage</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">AI Decision</th>
+                <th className="px-3 py-2 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Checks</th>
               </tr>
             </thead>
             <tbody>
               {deals.map((deal, i) => (
                 <tr key={`${deal.deal_name}-${i}`} className="border-b border-border/50 hover:bg-surface-elevated/50">
-                  <td className="px-3 py-2 font-medium text-foreground max-w-xs truncate">{deal.deal_name}</td>
-                  <td className="px-3 py-2 text-muted-foreground font-mono">{formatCurrency(deal.deal_size)}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{deal.industry || "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{deal.geography || "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground font-mono">{deal.ebitda ? deal.ebitda.toLocaleString() : "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground font-mono">{deal.leverage ? deal.leverage + "x" : "—"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 font-medium text-foreground max-w-xs truncate whitespace-nowrap">{deal.deal_name}</td>
+                  <td className="px-3 py-2 text-muted-foreground font-mono whitespace-nowrap">{formatCurrency(deal.deal_size)}</td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{deal.industry || "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{deal.geography || "—"}</td>
+                  <td className="px-3 py-2 text-muted_foreground font-mono whitespace-nowrap">{deal.ebitda ? deal.ebitda.toLocaleString() : "—"}</td>
+                  <td className="px-3 py-2 text-muted_foreground font-mono whitespace-nowrap">{deal.leverage ? deal.leverage + "x" : "—"}</td>
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <Badge variant="default" className={`${getDecisionConfig(deal.ai_decision).bg} ${getDecisionConfig(deal.ai_decision).border} ${getDecisionConfig(deal.ai_decision).text}`} size="sm">
                       {deal.ai_decision}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
                       {deal.simulated_checks?.ebitda_check ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <XCircle className="w-3.5 h-3.5 text-danger" />}
                       {deal.simulated_checks?.leverage_check ? <CheckCircle2 className="w-3.5 h-3.5 text-success" /> : <XCircle className="w-3.5 h-3.5 text-danger" />}

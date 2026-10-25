@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef } from "react";
+import React, { forwardRef, useState, useEffect, useCallback } from "react";
 
 export interface PageShellProps {
   children: React.ReactNode;
@@ -115,30 +115,46 @@ export interface ResponsiveSplitPaneProps {
   left: React.ReactNode;
   right: React.ReactNode;
   leftWidth?: number;
+  minLeftWidth?: number;
+  maxLeftWidth?: number;
   mobileBreakpoint?: number;
   className?: string;
+  /** Callback when mobile detail view is closed - use to restore queue state */
+  onMobileDetailClose?: () => void;
 }
 
 export function ResponsiveSplitPane({
   left,
   right,
   leftWidth = 320,
+  minLeftWidth = 280,
+  maxLeftWidth = 480,
   mobileBreakpoint = 1024,
   className = "",
+  onMobileDetailClose,
 }: ResponsiveSplitPaneProps) {
-  const [isMobile, setIsMobile] = React.useState(false);
-  const [showDetail, setShowDetail] = React.useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < mobileBreakpoint;
       setIsMobile(mobile);
-      if (!mobile) setShowDetail(false);
+      if (!mobile) {
+        setShowDetail(false);
+        onMobileDetailClose?.();
+      }
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, [mobileBreakpoint]);
+  }, [mobileBreakpoint, onMobileDetailClose]);
+
+  // Handle back navigation on mobile
+  const handleBack = useCallback(() => {
+    setShowDetail(false);
+    onMobileDetailClose?.();
+  }, [onMobileDetailClose]);
 
   if (isMobile) {
     return (
@@ -149,11 +165,11 @@ export function ResponsiveSplitPane({
           </div>
         ) : (
           <div className="h-full flex flex-col">
-            <div className="px-3 py-2 border-b border-border bg-surface flex items-center justify-between">
+            <div className="px-3 py-2 border-b border-border bg-surface flex items-center justify-between sticky top-0 z-10">
               <h2 className="text-heading-sm text-foreground">Deal Details</h2>
               <button
-                onClick={() => setShowDetail(false)}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                onClick={handleBack}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
                 aria-label="Back to queue"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -171,6 +187,13 @@ export function ResponsiveSplitPane({
   }
 
   return (
-    <SplitPane left={left} right={right} leftWidth={leftWidth} className={className} />
+    <SplitPane
+      left={left}
+      right={right}
+      leftWidth={leftWidth}
+      minLeftWidth={minLeftWidth}
+      maxLeftWidth={maxLeftWidth}
+      className={className}
+    />
   );
 }

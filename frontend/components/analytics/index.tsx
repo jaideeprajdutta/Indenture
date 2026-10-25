@@ -172,28 +172,28 @@ export function SourceTable({ analytics, deals }: { analytics: AnalyticsData; de
         </h3>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-body-sm">
+        <table className="w-full text-body-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-border bg-surface">
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Source</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right">Total</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right">Advanced</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right">Rejected</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right">Adv Rate</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right">Rej Rate</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right">Avg Size</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Source</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">Total</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">Advanced</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">Rejected</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">Adv Rate</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">Rej Rate</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider text-right whitespace-nowrap">Avg Size</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.source} className="border-b border-border/50 hover:bg-surface-elevated/50">
-                <td className="px-4 py-2.5 font-mono text-foreground capitalize">{row.source}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{row.total}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-success">{row.advanced}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-danger">{row.rejected}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-success">{row.advanceRate}%</td>
-                <td className="px-4 py-2.5 text-right font-mono text-danger">{row.rejectRate}%</td>
-                <td className="px-4 py-2.5 text-right font-mono text-muted-foreground">{formatCurrency(row.avgSize)}</td>
+                <td className="px-4 py-2.5 font-mono text-foreground capitalize whitespace-nowrap">{row.source}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-muted-foreground whitespace-nowrap">{row.total}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-success whitespace-nowrap">{row.advanced}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-danger whitespace-nowrap">{row.rejected}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-success whitespace-nowrap">{row.advanceRate}%</td>
+                <td className="px-4 py-2.5 text-right font-mono text-danger whitespace-nowrap">{row.rejectRate}%</td>
+                <td className="px-4 py-2.5 text-right font-mono text-muted-foreground whitespace-nowrap">{formatCurrency(row.avgSize)}</td>
               </tr>
             ))}
           </tbody>
@@ -240,16 +240,16 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
         </h3>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-body-sm">
+        <table className="w-full text-body-sm min-w-[700px]">
           <thead>
             <tr className="border-b border-border bg-surface">
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Deal</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Lender</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Decision</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Size</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Source</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Status</th>
-              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider">Date</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Deal</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Lender</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Decision</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Size</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Source</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Status</th>
+              <th className="px-4 py-2.5 font-medium text-label-xs text-muted-foreground uppercase tracking-wider whitespace-nowrap">Date</th>
             </tr>
           </thead>
           <tbody>
@@ -264,21 +264,21 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
 
               return (
                 <tr key={deal.id} className="border-b border-border/50 hover:bg-surface-elevated/50">
-                  <td className="px-4 py-2.5 font-medium text-foreground max-w-xs truncate">{deal.deal_name}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground font-mono">{deal.lender_name}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 font-medium text-foreground max-w-xs truncate whitespace-nowrap">{deal.deal_name}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground font-mono whitespace-nowrap">{deal.lender_name}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
                     <Badge variant="default" className={`${config.bg} ${config.border} ${config.text}`} size="sm" dot>
                       {deal.ai_decision}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground font-mono">{formatCurrency(deal.deal_size)}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground capitalize text-body-sm">{deal.source}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-2.5 text-muted-foreground font-mono whitespace-nowrap">{formatCurrency(deal.deal_size)}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground capitalize text-body-sm whitespace-nowrap">{deal.source}</td>
+                  <td className="px-4 py-2.5 whitespace-nowrap">
                     <Badge variant="default" className={`${statusConfig.bg} ${statusConfig.border} ${statusConfig.text}`} size="sm">
                       {deal.human_status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground font-mono text-label-xs">{new Date(deal.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground font-mono text-label-xs whitespace-nowrap">{new Date(deal.created_at).toLocaleDateString()}</td>
                 </tr>
               );
             })}

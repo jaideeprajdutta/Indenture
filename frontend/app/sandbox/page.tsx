@@ -52,21 +52,21 @@ function CurrentMandate({ lender }: { lender: Lender | undefined }) {
         Current Mandate
       </h3>
       <div className="space-y-2 text-body-sm">
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
           <span className="text-muted-foreground">Min EBITDA</span>
           <span className="font-mono text-foreground">{lender.min_ebitda?.toLocaleString()}</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
           <span className="text-muted-foreground">Max Leverage</span>
           <span className="font-mono text-foreground">{lender.max_leverage}x</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
           <span className="text-muted-foreground">Geography</span>
-          <span className="font-mono text-foreground">{lender.allowed_geography.join(", ")}</span>
+          <span className="font-mono text-foreground truncate max-w-[200px] sm:max-w-none">{lender.allowed_geography.join(", ")}</span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1">
           <span className="text-muted-foreground">Qualitative</span>
-          <span className="font-mono text-foreground truncate max-w-[200px]">{lender.qualitative_exclusion}</span>
+          <span className="font-mono text-foreground truncate max-w-[200px] sm:max-w-none">{lender.qualitative_exclusion}</span>
         </div>
       </div>
     </div>
