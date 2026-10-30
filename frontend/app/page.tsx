@@ -56,6 +56,7 @@ export default function IndentureCommandCenter() {
 
   const [filter, setFilter] = React.useState("PENDING");
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = React.useState(false);
   const [overrideModal, setOverrideModal] = React.useState<{
     deal: Deal | null;
     action: string;
@@ -88,10 +89,15 @@ export default function IndentureCommandCenter() {
     (deal: Deal) => {
       clearEnrichmentError();
       setSelectedDeal(deal);
+      setMobileDetailOpen(true);
       fetchHistory(deal.deal_name, deal.lender_name);
     },
     [clearEnrichmentError, fetchHistory, setSelectedDeal]
   );
+
+  const handleMobileDetailClose = useCallback(() => {
+    setMobileDetailOpen(false);
+  }, []);
 
   const handleApprove = useCallback(async () => {
     if (!selectedDeal) return;
@@ -299,7 +305,8 @@ export default function IndentureCommandCenter() {
           leftWidth={360}
           minLeftWidth={320}
           maxLeftWidth={440}
-          onMobileDetailClose={() => setSelectedDeal(null)}
+          detailOpen={mobileDetailOpen && Boolean(selectedDeal)}
+          onMobileDetailClose={handleMobileDetailClose}
         />
       </PageContent>
 

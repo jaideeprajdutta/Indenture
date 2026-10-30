@@ -119,7 +119,9 @@ export interface ResponsiveSplitPaneProps {
   maxLeftWidth?: number;
   mobileBreakpoint?: number;
   className?: string;
-  /** Callback when mobile detail view is closed - use to restore queue state */
+  /** Whether the mobile detail pane should be visible. Ignored on desktop. */
+  detailOpen?: boolean;
+  /** Callback when the user closes the mobile detail view. */
   onMobileDetailClose?: () => void;
 }
 
@@ -131,35 +133,29 @@ export function ResponsiveSplitPane({
   maxLeftWidth = 480,
   mobileBreakpoint = 1024,
   className = "",
+  detailOpen = false,
   onMobileDetailClose,
 }: ResponsiveSplitPaneProps) {
   const [isMobile, setIsMobile] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < mobileBreakpoint;
-      setIsMobile(mobile);
-      if (!mobile) {
-        setShowDetail(false);
-        onMobileDetailClose?.();
-      }
+      setIsMobile(window.innerWidth < mobileBreakpoint);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
-  }, [mobileBreakpoint, onMobileDetailClose]);
+  }, [mobileBreakpoint]);
 
   // Handle back navigation on mobile
   const handleBack = useCallback(() => {
-    setShowDetail(false);
     onMobileDetailClose?.();
   }, [onMobileDetailClose]);
 
   if (isMobile) {
     return (
       <div className={className} style={{ height: "calc(100vh - 140px)" }}>
-        {!showDetail ? (
+        {!detailOpen ? (
           <div className="h-full overflow-y-auto">
             {left}
           </div>

@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+const DEFAULT_ORDER_BY = { column: "created_at", ascending: false } as const;
 
 export interface Deal {
   id: number;
@@ -64,83 +66,85 @@ export interface UseDealsReturn {
 }
 
 export function useDeals(options: UseDealsOptions = {}): UseDealsReturn {
-  const { autoFetch = true, orderBy = { column: "created_at", ascending: false } } = options;
+  const { autoFetch = true, orderBy = DEFAULT_ORDER_BY } = options;
+  const orderByColumn = orderBy.column;
+  const orderByAscending = orderBy.ascending;
   
   const [deals, setDeals] = useState<Deal[]>([]);
-  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedDealId, setSelectedDealId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(Boolean(supabase));
+  const [error, setError] = useState<string | null>(
+    supabase ? null : "Missing Supabase configuration in .env.local"
+  );
+  const requestIdRef = useRef(0);
 
-  const fetchDeals = useCallback(async (showRefresh = false) => {
-    if (!supabase) {
-      setError("Missing Supabase configuration in .env.local");
-      setLoading(false);
-      return;
-    }
+  const fetchDeals = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
 
-    if (showRefresh) {
-      // Could set a separate refreshing state if needed
-    }
+    if (!supabase) return;
 
     try {
-      let query = supabase.from("deal_queue").select("*");
-      
-      if (orderBy) {
-        query = query.order(orderBy.column, { ascending: orderBy.ascending });
-      }
+      const query = supabase
+        .from("deal_queue")
+        .select("*")
+        .order(orderByColumn, { ascending: orderByAscending });
 
       const { data, error: queryError } = await query;
 
+      if (requestId !== requestIdRef.current) return;
       if (queryError) throw queryError;
       
       const newDeals = data || [];
       setDeals(newDeals);
       
-      // Preserve selection: if a deal was selected, try to find it in the refreshed data
-      if (selectedDeal) {
-        const stillExists = newDeals.find((d) => d.id === selectedDeal.id);
-        if (stillExists) {
-          setSelectedDeal(stillExists);
-        } else if (newDeals.length > 0) {
-          // Selected deal no longer exists, select first deal
-          setSelectedDeal(newDeals[0]);
-        } else {
-          // No deals at all
-          setSelectedDeal(null);
+      // Preserve the current selection by ID; only fall back when it no longer exists.
+      setSelectedDealId((currentId) => {
+        if (currentId !== null && newDeals.some((deal) => deal.id === currentId)) {
+          return currentId;
         }
-      } else if (newDeals.length > 0) {
-        // No previous selection, select first deal
-        setSelectedDeal(newDeals[0]);
-      }
+        return newDeals.length > 0 ? newDeals[0].id : null;
+      });
       
       setError(null);
     } catch (err: unknown) {
+      if (requestId !== requestIdRef.current) return;
       const message = err instanceof Error ? err.message : "Failed to fetch deals";
       console.error("Fetch deals error:", err);
       setError(message);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [orderBy, selectedDeal]);
+  }, [orderByColumn, orderByAscending]);
 
-  const refreshDeals = useCallback(() => fetchDeals(true), [fetchDeals]);
+  const selectedDeal = useMemo(
+    () => (selectedDealId === null ? null : deals.find((deal) => deal.id === selectedDealId) ?? null),
+    [deals, selectedDealId]
+  );
+
+  const setSelectedDeal = useCallback((deal: Deal | null) => {
+    setSelectedDealId(deal?.id ?? null);
+  }, []);
+
+  const refreshDeals = useCallback(() => fetchDeals(), [fetchDeals]);
 
   const optimisticRemove = useCallback((id: number) => {
     setDeals((prev) => prev.filter((d) => d.id !== id));
-    setSelectedDeal((prev) => (prev?.id === id ? null : prev));
+    setSelectedDealId((prev) => (prev === id ? null : prev));
   }, []);
 
   const optimisticUpdate = useCallback((id: number, updates: Partial<Deal>) => {
     setDeals((prev) =>
       prev.map((d) => (d.id === id ? { ...d, ...updates } : d))
     );
-    setSelectedDeal((prev) => (prev?.id === id ? { ...prev, ...updates } : prev));
   }, []);
 
   useEffect(() => {
-    if (autoFetch) {
-      fetchDeals();
-    }
+    if (!autoFetch) return;
+    queueMicrotask(() => {
+      void fetchDeals();
+    });
   }, [fetchDeals, autoFetch]);
 
   return {
