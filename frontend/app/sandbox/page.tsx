@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Settings, FileText } from "lucide-react";
 import { PageShell, PageContent } from "@/components/layout";
 import { PageHeader } from "@/components/layout";
+import { Button } from "@/components/ui";
 import { LenderSelector, MandateControls, SummaryCard, DecisionDistribution, DealDetailSection } from "@/components/sandbox";
 
 const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -14,6 +15,17 @@ interface Lender {
   max_leverage: number;
   allowed_geography: string[];
   qualitative_exclusion: string;
+}
+
+interface SandboxDealDetail {
+  deal_name: string;
+  deal_size: number | null;
+  industry: string | null;
+  geography: string | null;
+  ebitda: number | null;
+  leverage: number | null;
+  ai_decision: string;
+  simulated_checks?: Record<string, boolean>;
 }
 
 interface SandboxResult {
@@ -27,10 +39,10 @@ interface SandboxResult {
   unchanged: number;
   decision_distribution: Record<string, number>;
   deal_details: {
-    newly_eligible: any[];
-    no_longer_eligible: any[];
-    unchanged_eligible: any[];
-    unchanged_ineligible: any[];
+    newly_eligible: SandboxDealDetail[];
+    no_longer_eligible: SandboxDealDetail[];
+    unchanged_eligible: SandboxDealDetail[];
+    unchanged_ineligible: SandboxDealDetail[];
   };
 }
 
@@ -84,27 +96,44 @@ export default function MandateSandboxPage() {
     allowed_industry: "",
   });
   const [result, setResult] = useState<SandboxResult | null>(null);
+  const [lendersLoading, setLendersLoading] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [lendersError, setLendersError] = useState<string | null>(null);
+  const [simulationError, setSimulationError] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState<Record<string, boolean>>({});
+  const lendersRequestIdRef = useRef(0);
+  const simulateRequestIdRef = useRef(0);
+  const appliedLenderRef = useRef<string | null>(null);
 
   const fetchLenders = useCallback(async () => {
+    const requestId = ++lendersRequestIdRef.current;
+    setLendersLoading(true);
     try {
       const res = await fetch(`${backendUrl}/mandate-sandbox/lenders`);
+      if (requestId !== lendersRequestIdRef.current) return;
       if (!res.ok) throw new Error("Failed to fetch lenders");
       const data = await res.json();
+      if (requestId !== lendersRequestIdRef.current) return;
       setLenders(data.lenders);
-      if (data.lenders.length > 0 && !selectedLender) {
-        setSelectedLender(data.lenders[0].name);
+      setLendersError(null);
+      if (data.lenders.length > 0) {
+        setSelectedLender((current) => current || data.lenders[0].name);
       }
     } catch (err: unknown) {
+      if (requestId !== lendersRequestIdRef.current) return;
       const message = err instanceof Error ? err.message : "Failed to fetch lenders";
-      setError(message);
+      setLendersError(message);
+    } finally {
+      if (requestId === lendersRequestIdRef.current) {
+        setLendersLoading(false);
+      }
     }
-  }, [selectedLender]);
+  }, []);
 
-  const fetchCurrentMandate = useCallback(() => {
+  const fetchCurrentMandate = useCallback((force = false) => {
     if (!selectedLender) return;
+    if (!force && appliedLenderRef.current === selectedLender) return;
+
     const lender = lenders.find((l) => l.name === selectedLender);
     if (lender) {
       setForm({
@@ -114,21 +143,44 @@ export default function MandateSandboxPage() {
         min_deal_size: "",
         allowed_industry: "",
       });
+      appliedLenderRef.current = selectedLender;
     }
   }, [selectedLender, lenders]);
 
   useEffect(() => {
-    fetchLenders();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void fetchLenders();
+    });
+    return () => {
+      cancelled = true;
+      lendersRequestIdRef.current += 1;
+    };
   }, [fetchLenders]);
 
   useEffect(() => {
-    fetchCurrentMandate();
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) fetchCurrentMandate();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [fetchCurrentMandate]);
+
+  const handleLenderChange = useCallback((lenderName: string) => {
+    simulateRequestIdRef.current += 1;
+    setLoading(false);
+    setSimulationError(null);
+    setSelectedLender(lenderName);
+  }, []);
 
   const handleSimulate = useCallback(async () => {
     if (!selectedLender) return;
+
+    const requestId = ++simulateRequestIdRef.current;
     setLoading(true);
-    setError(null);
+    setSimulationError(null);
     try {
       const payload: Record<string, unknown> = { lender_name: selectedLender };
       if (form.min_ebitda !== "") payload.min_ebitda = Number(form.min_ebitda);
@@ -142,19 +194,28 @@ export default function MandateSandboxPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (requestId !== simulateRequestIdRef.current) return;
       if (!res.ok) throw new Error("Simulation failed");
       const data = await res.json();
+      if (requestId !== simulateRequestIdRef.current) return;
       setResult(data);
+      setSimulationError(null);
     } catch (err: unknown) {
+      if (requestId !== simulateRequestIdRef.current) return;
       const message = err instanceof Error ? err.message : "Simulation failed";
-      setError(message);
+      setSimulationError(message);
     } finally {
-      setLoading(false);
+      if (requestId === simulateRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [selectedLender, form]);
 
   const handleReset = useCallback(() => {
-    fetchCurrentMandate();
+    simulateRequestIdRef.current += 1;
+    setLoading(false);
+    setSimulationError(null);
+    fetchCurrentMandate(true);
     setResult(null);
   }, [fetchCurrentMandate]);
 
@@ -164,13 +225,22 @@ export default function MandateSandboxPage() {
     setShowDetails((prev) => ({ ...prev, [title]: !prev[title] }));
   }, []);
 
-  if (error) {
+  if (lendersError && lenders.length === 0) {
     return (
       <PageShell>
         <PageContent className="flex items-center justify-center p-6">
           <div className="bg-surface border border-border p-6 max-w-lg text-center">
-            <h2 className="text-heading-md text-foreground mb-2">Error</h2>
-            <p className="text-body-sm text-muted-foreground font-mono">{error}</p>
+            <h2 className="text-heading-md text-foreground mb-2">Failed to load sandbox</h2>
+            <p className="text-body-sm text-muted-foreground font-mono">{lendersError}</p>
+            <Button
+              variant="primary"
+              size="sm"
+              className="mt-4"
+              onClick={() => { void fetchLenders(); }}
+              loading={lendersLoading}
+            >
+              Retry
+            </Button>
           </div>
         </PageContent>
       </PageShell>
@@ -192,10 +262,26 @@ export default function MandateSandboxPage() {
         ]}
       />
       <PageContent className="p-4 space-y-4">
+        {lendersError && lenders.length > 0 && (
+          <div className="flex flex-col gap-3 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-body-sm text-danger">{lendersError}</p>
+            <Button variant="ghost" size="sm" onClick={() => { void fetchLenders(); }} loading={lendersLoading}>
+              Retry
+            </Button>
+          </div>
+        )}
+        {simulationError && (
+          <div className="flex flex-col gap-3 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-body-sm text-danger">{simulationError}</p>
+            <Button variant="ghost" size="sm" onClick={handleSimulate} loading={loading}>
+              Retry
+            </Button>
+          </div>
+        )}
         <LenderSelector
           lenders={lenders}
           selectedLender={selectedLender}
-          onChange={setSelectedLender}
+          onChange={handleLenderChange}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -106,24 +106,24 @@ export const TabPanels = forwardRef<HTMLDivElement, TabPanelsProps>(
 TabPanels.displayName = "TabPanels";
 
 export interface TabPanelProps {
-  key: string;
+  tabKey: string;
   children: React.ReactNode;
   activeKey: string;
   className?: string;
 }
 
 export const TabPanel = forwardRef<HTMLDivElement, TabPanelProps>(
-  ({ key, children, activeKey, className = "", ...props }, ref) => {
-    const isActive = activeKey === key;
+  ({ tabKey, children, activeKey, className = "", ...props }, ref) => {
+    const isActive = activeKey === tabKey;
 
     if (!isActive) return null;
 
     return (
       <div
         ref={ref}
-        id={`${key}-panel`}
+        id={`${tabKey}-panel`}
         role="tabpanel"
-        aria-labelledby={`${key}-trigger`}
+        aria-labelledby={`${tabKey}-trigger`}
         className={`
           animate-in
           ${className}

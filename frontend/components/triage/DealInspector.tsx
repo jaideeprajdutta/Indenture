@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Panel, PanelHeader, Badge } from "@/components/ui";
+import { Button, Panel, PanelHeader, Badge } from "@/components/ui";
 import { Globe, ShieldAlert, Target, AlertTriangle, FileText, Building2, DollarSign, CheckCircle2, Activity } from "lucide-react";
 import { formatCurrency, formatDate, getDecisionConfig, normalizeDecision } from "@/lib/utils";
 import { MandateChecks } from "./MandateChecks";
@@ -68,6 +68,8 @@ interface DealInspectorProps {
   enrichment?: { loading: boolean; error: string | null } | null;
   history: Array<{ event_type: string; created_at: string; reason: string | null; previous_decision: string | null; new_decision: string | null }>;
   historyLoading: boolean;
+  historyError?: string | null;
+  onRetryHistory?: () => void;
   className?: string;
 }
 
@@ -82,6 +84,8 @@ export function DealInspector({
   enrichment,
   history,
   historyLoading,
+  historyError,
+  onRetryHistory,
   className = "",
 }: DealInspectorProps) {
   if (!deal) {
@@ -128,6 +132,16 @@ export function DealInspector({
       
       <Panel variant="default" padding="md">
         <PanelHeader title="Decision History" icon={<Activity className="w-4 h-4" />} />
+        {historyError && (
+          <div className="mb-3 flex flex-col gap-2 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-body-sm text-danger">{historyError}</p>
+            {onRetryHistory && (
+              <Button variant="ghost" size="sm" onClick={onRetryHistory} loading={historyLoading}>
+                Retry
+              </Button>
+            )}
+          </div>
+        )}
         {historyLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
@@ -135,7 +149,9 @@ export function DealInspector({
             ))}
           </div>
         ) : history.length === 0 ? (
-          <p className="text-muted-foreground text-body-sm text-center py-4">No history recorded yet</p>
+          historyError ? null : (
+            <p className="text-muted-foreground text-body-sm text-center py-4">No history recorded yet</p>
+          )
         ) : (
           <div className="space-y-2">
             {history.map((event, i) => (

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { BarChart3, FileText, Settings } from "lucide-react";
 import { PageShell, PageContent } from "@/components/layout";
 import { PageHeader, ActionBar } from "@/components/layout";
-import { Tabs, TabPanels, TabPanel, type TabItem } from "@/components/ui";
+import { Button, Tabs, TabPanels, TabPanel, type TabItem } from "@/components/ui";
 import { MetricCard, DecisionDistribution, SourceBars, SourceTable, DealLogTable } from "@/components/analytics";
 import { formatCurrency } from "@/lib/utils";
 
@@ -46,16 +46,25 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [deals, setDeals] = useState<DealLogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dealsError, setDealsError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "deals">("overview");
+  const analyticsRequestIdRef = useRef(0);
+  const dealsRequestIdRef = useRef(0);
 
   const fetchAnalytics = useCallback(async () => {
+    const requestId = ++analyticsRequestIdRef.current;
     try {
       const res = await fetch(`${backendUrl}/analytics`);
+      if (requestId !== analyticsRequestIdRef.current) return;
       if (!res.ok) throw new Error("Failed to fetch analytics");
       const data = await res.json();
+      if (requestId !== analyticsRequestIdRef.current) return;
       setAnalytics(data);
+      setError(null);
     } catch (err: unknown) {
+      if (requestId !== analyticsRequestIdRef.current) return;
       const message = err instanceof Error ? err.message : "Failed to fetch analytics";
       setError(message);
     }
@@ -63,29 +72,56 @@ export default function AnalyticsPage() {
 
   const fetchDeals = useCallback(async () => {
     if (!supabase) return;
+
+    const requestId = ++dealsRequestIdRef.current;
     try {
       const { data, error: queryError } = await supabase
         .from("deal_queue")
         .select("id,deal_name,lender_name,deal_size,source,ai_decision,human_status,created_at")
         .order("created_at", { ascending: false });
+      if (requestId !== dealsRequestIdRef.current) return;
       if (queryError) throw queryError;
       setDeals(data || []);
+      setDealsError(null);
     } catch (err: unknown) {
+      if (requestId !== dealsRequestIdRef.current) return;
+      const message = err instanceof Error ? err.message : "Failed to fetch deal log";
       console.error("Fetch deals error:", err);
+      setDealsError(message);
     }
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    const loadData = async () => {
-      await Promise.all([fetchAnalytics(), fetchDeals()]);
-      if (mounted) setLoading(false);
-    };
-    loadData();
-    return () => { mounted = false; };
+  const loadData = useCallback(async () => {
+    await Promise.all([fetchAnalytics(), fetchDeals()]);
   }, [fetchAnalytics, fetchDeals]);
 
-  if (loading) {
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      void loadData().finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    });
+    return () => {
+      cancelled = true;
+      analyticsRequestIdRef.current += 1;
+      dealsRequestIdRef.current += 1;
+    };
+  }, [loadData]);
+
+  const handleRetry = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadData]);
+
+  const pageError = error || dealsError;
+
+  if (loading && !analytics && deals.length === 0) {
     return (
       <PageShell>
         <PageContent className="flex items-center justify-center h-[calc(100vh-140px)]">
@@ -99,13 +135,16 @@ export default function AnalyticsPage() {
     );
   }
 
-  if (error) {
+  if (pageError && !analytics && !loading) {
     return (
       <PageShell>
         <PageContent className="flex items-center justify-center p-6">
           <div className="bg-surface border border-border p-6 max-w-lg text-center">
             <h2 className="text-heading-md text-foreground mb-2">Failed to load analytics</h2>
-            <p className="text-body-sm text-muted-foreground font-mono">{error}</p>
+            <p className="text-body-sm text-muted-foreground font-mono">{pageError}</p>
+            <Button variant="primary" size="sm" className="mt-4" onClick={handleRetry} loading={refreshing}>
+              Retry
+            </Button>
           </div>
         </PageContent>
       </PageShell>
@@ -131,8 +170,16 @@ export default function AnalyticsPage() {
         />
       </ActionBar>
       <PageContent className="p-4">
+        {pageError && (
+          <div className="mb-4 flex flex-col gap-3 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-body-sm text-danger">{pageError}</p>
+            <Button variant="ghost" size="sm" onClick={handleRetry} loading={refreshing}>
+              Retry
+            </Button>
+          </div>
+        )}
         <TabPanels>
-          <TabPanel key="overview" activeKey={activeTab}>
+          <TabPanel tabKey="overview" activeKey={activeTab}>
             {analytics && (
               <div className="space-y-4">
                 {/* KEY METRICS ROW */}
@@ -157,7 +204,7 @@ export default function AnalyticsPage() {
             )}
           </TabPanel>
 
-          <TabPanel key="deals" activeKey={activeTab}>
+          <TabPanel tabKey="deals" activeKey={activeTab}>
             <DealLogTable deals={deals} />
           </TabPanel>
         </TabPanels>

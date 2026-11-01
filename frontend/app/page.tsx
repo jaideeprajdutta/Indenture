@@ -42,7 +42,7 @@ export default function IndentureCommandCenter() {
     refreshDeals,
   } = useDeals();
 
-  const { history, loading: historyLoading, fetchHistory } = useHistory();
+  const { history, loading: historyLoading, error: historyError, fetchHistory } = useHistory();
 
   const {
     simulationState,
@@ -85,14 +85,32 @@ export default function IndentureCommandCenter() {
     [fetchDeals]
   );
 
+  const selectedDealName = selectedDeal?.deal_name ?? null;
+  const selectedDealLender = selectedDeal?.lender_name ?? null;
+
+  React.useEffect(() => {
+    if (!selectedDealName || !selectedDealLender) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) void fetchHistory(selectedDealName, selectedDealLender);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchHistory, selectedDealLender, selectedDealName]);
+
+  const handleRetryHistory = useCallback(() => {
+    if (!selectedDealName || !selectedDealLender) return;
+    void fetchHistory(selectedDealName, selectedDealLender);
+  }, [fetchHistory, selectedDealLender, selectedDealName]);
+
   const handleSelectDeal = useCallback(
     (deal: Deal) => {
       clearEnrichmentError();
       setSelectedDeal(deal);
       setMobileDetailOpen(true);
-      fetchHistory(deal.deal_name, deal.lender_name);
     },
-    [clearEnrichmentError, fetchHistory, setSelectedDeal]
+    [clearEnrichmentError, setSelectedDeal]
   );
 
   const handleMobileDetailClose = useCallback(() => {
@@ -221,13 +239,22 @@ export default function IndentureCommandCenter() {
     filter === "ALL" ? true : (d.human_status || "PENDING") === filter
   );
 
-  if (error) {
+  if (error && deals.length === 0 && !loading) {
     return (
       <PageShell>
         <PageContent className="flex items-center justify-center p-6">
           <div className="bg-surface border border-border p-6 max-w-lg text-center">
             <h2 className="text-heading-md text-foreground mb-2">System Error</h2>
             <p className="text-body-sm text-muted-foreground font-mono">{error}</p>
+            <Button
+              variant="primary"
+              size="sm"
+              className="mt-4"
+              onClick={() => handleFetchDeals(true)}
+              loading={isRefreshing}
+            >
+              Retry
+            </Button>
           </div>
         </PageContent>
       </PageShell>
@@ -276,6 +303,21 @@ export default function IndentureCommandCenter() {
         </div>
       </ActionBar>
       <PageContent>
+        {error && deals.length > 0 && (
+          <div className="m-3 flex flex-col gap-3 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-body-sm text-danger">
+              Showing last loaded deals. {error}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleFetchDeals(true)}
+              loading={isRefreshing}
+            >
+              Retry
+            </Button>
+          </div>
+        )}
         <ResponsiveSplitPane
           left={
             <div className="h-full overflow-y-auto p-3 bg-surface">
@@ -300,6 +342,8 @@ export default function IndentureCommandCenter() {
               enrichment={enrichment}
               history={history}
               historyLoading={historyLoading}
+              historyError={historyError}
+              onRetryHistory={handleRetryHistory}
             />
           }
           leftWidth={360}
