@@ -414,7 +414,12 @@ def simulate_mandate_changes(request: MandateSandboxRequest) -> dict:
             "no_longer_eligible": 0,
             "unchanged": 0,
             "decision_distribution": {},
-            "deal_details": [],
+            "deal_details": {
+                "newly_eligible": [],
+                "no_longer_eligible": [],
+                "unchanged_eligible": [],
+                "unchanged_ineligible": [],
+            },
         }
     
     # Evaluate each deal against both mandates
@@ -641,6 +646,9 @@ def enrich_deal_endpoint(deal_id: int, request: EnrichDealRequest) -> dict:
         "ai_reevaluation": result.ai_reevaluation,
         "deal": updated.data[0] if updated.data else None,
     }
+
+
+@app.post("/deals/{deal_id}/route-to-crm")
 def route_deal_to_crm_endpoint(deal_id: int, request: RouteToCRMRequest) -> dict:
     """Route a deal to CRM."""
     supabase = get_supabase_client()
