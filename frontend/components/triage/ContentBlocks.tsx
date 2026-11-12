@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Panel, PanelHeader } from "@/components/ui";
+import { PanelHeader } from "@/components/ui";
 
 interface ContentBlockProps {
   title: string;
@@ -30,19 +30,17 @@ export function ContentBlock({ title, icon, children, variant = "default", class
   const hasContent = React.Children.count(children) > 0 || (typeof children === "string" && children.trim().length > 0);
 
   return (
-    <Panel variant="bordered" padding="md" className={className}>
+    <div className={`rounded-lg border p-4 ${variantStyles[variant]} ${className}`}>
       <PanelHeader
         title={title}
-        className="flex items-center gap-2"
-      >
-        {icon && <span className={iconStyles[variant]} aria-hidden="true">{icon}</span>}
-      </PanelHeader>
-      <div className={`${variantStyles[variant]} rounded-lg p-3 font-mono text-body-sm whitespace-pre-wrap`}>
+        icon={icon ? <span className={iconStyles[variant]} aria-hidden="true">{icon}</span> : undefined}
+      />
+      <div className="text-body-sm whitespace-pre-wrap">
         {hasContent ? children : (
           <span className="text-muted-foreground">{emptyMessage}</span>
         )}
       </div>
-    </Panel>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Settings, FileText, Activity, Database, BarChart3 } from "lucide-react";
+import { Settings, FileText, Activity, BarChart3 } from "lucide-react";
 import { PageShell, PageContent } from "@/components/layout";
 import { PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui";
@@ -207,13 +207,10 @@ export default function MandateSandboxPage() {
       <PageHeader
         title="INDENTURE"
         icon={<Settings className="w-5 h-5 text-muted-foreground" />}
-        statusItems={[
-          { label: "LLM Active", icon: <span className="w-1.5 h-1.5 rounded-full bg-success" />, status: "connected" },
-          { label: "Synced", icon: <Database className="w-3.5 h-3.5" />, status: "connected" },
-        ]}
         navigation={[
           { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
           { label: "Analytics", href: "/analytics", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+          { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" />, active: true },
         ]}
       />
       <PageContent className="p-4 space-y-4">

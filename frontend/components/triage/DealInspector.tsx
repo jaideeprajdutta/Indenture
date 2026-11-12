@@ -50,6 +50,7 @@ function DealHeader({ deal }: DealHeaderProps) {
         className={`${config.bg} ${config.border} ${config.text}`}
         size="md"
         dot
+        dotClassName={config.dot}
       >
         {decision}
       </Badge>

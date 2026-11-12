@@ -25,6 +25,7 @@ export interface SimulationState {
 export interface UseSimulationReturn {
   simulationState: SimulationState;
   isSimulating: boolean;
+  simulationError: string | null;
   openSimulation: () => void;
   closeSimulation: () => void;
   updateForm: (field: keyof SimulationForm, value: string) => void;
@@ -51,9 +52,10 @@ export function useSimulation(): UseSimulationReturn {
     form: initialForm,
   });
   const [isSimulating, setIsSimulating] = useState(false);
-
+  const [error, setError] = useState<string | null>(null);
   const openSimulation = useCallback(() => {
     setSimulationState({ isOpen: true, form: initialForm });
+    setError(null);
   }, []);
 
   const closeSimulation = useCallback(() => {
@@ -75,11 +77,12 @@ export function useSimulation(): UseSimulationReturn {
     async (onSuccess: () => Promise<void>) => {
       const form = simulationState.form;
       if (!form.deal_name.trim() || !form.context_text.trim()) {
-        alert("Deal name and context are required");
+        setError("Deal name and context are required");
         return;
       }
 
       setIsSimulating(true);
+      setError(null);
       try {
         const res = await fetch(`${backendUrl}/deals/simulate`, {
           method: "POST",
@@ -98,13 +101,13 @@ export function useSimulation(): UseSimulationReturn {
           }),
         });
         if (!res.ok) throw new Error("Simulation failed");
-        
+
         closeSimulation();
         await onSuccess();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : "Simulation failed";
         console.error("Simulate error:", err);
-        alert(message);
+        setError(message);
       } finally {
         setIsSimulating(false);
       }
@@ -115,6 +118,7 @@ export function useSimulation(): UseSimulationReturn {
   return {
     simulationState,
     isSimulating,
+    simulationError: error,
     openSimulation,
     closeSimulation,
     updateForm,

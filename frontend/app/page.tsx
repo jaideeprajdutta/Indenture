@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { Plus, RefreshCw, Activity, Database, Settings } from "lucide-react";
+import { Plus, RefreshCw, Activity, Settings } from "lucide-react";
 import { PageShell, PageContent, ResponsiveSplitPane } from "@/components/layout";
 import { PageHeader, ActionBar, FilterTabs } from "@/components/layout";
 import { DealQueue, DealInspector } from "@/components/triage";
@@ -47,6 +47,7 @@ export default function IndentureCommandCenter() {
   const {
     simulationState,
     isSimulating,
+    simulationError,
     openSimulation,
     closeSimulation,
     updateForm,
@@ -63,6 +64,8 @@ export default function IndentureCommandCenter() {
   } | null>(null);
   const [overrideReason, setOverrideReason] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [overrideError, setOverrideError] = React.useState<string | null>(null);
   const [crmRouting, setCrmRouting] = React.useState<{
     loading: boolean;
     error: string | null;
@@ -120,6 +123,7 @@ export default function IndentureCommandCenter() {
   const handleApprove = useCallback(async () => {
     if (!selectedDeal) return;
     setIsSubmitting(true);
+    setActionError(null);
     try {
       const res = await fetch(`${backendUrl}/action/approve`, {
         method: "POST",
@@ -135,7 +139,7 @@ export default function IndentureCommandCenter() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Approve failed";
       console.error("Approve error:", err);
-      alert(message);
+      setActionError(`Approve failed: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -144,6 +148,7 @@ export default function IndentureCommandCenter() {
   const openOverrideModal = useCallback((deal: Deal) => {
     setOverrideModal({ deal, action: "" });
     setOverrideReason("");
+    setOverrideError(null);
   }, []);
 
   const handleOverride = useCallback(async () => {
@@ -152,6 +157,7 @@ export default function IndentureCommandCenter() {
     const dealName = deal.deal_name;
     const lenderName = deal.lender_name;
     setIsSubmitting(true);
+    setOverrideError(null);
     try {
       const res = await fetch(`${backendUrl}/action/override`, {
         method: "POST",
@@ -171,7 +177,7 @@ export default function IndentureCommandCenter() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Override failed";
       console.error("Override error:", err);
-      alert(message);
+      setOverrideError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -266,11 +272,8 @@ export default function IndentureCommandCenter() {
       <PageHeader
         title="INDENTURE"
         icon={<Activity className="w-5 h-5 text-muted-foreground" />}
-        statusItems={[
-          { label: "LLM Active", icon: <span className="w-1.5 h-1.5 rounded-full bg-success" />, status: "connected" },
-          { label: "Synced", icon: <Database className="w-3.5 h-3.5" />, status: "connected" },
-        ]}
         navigation={[
+          { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" />, active: true },
           { label: "Analytics", href: "/analytics", icon: <Activity className="w-3.5 h-3.5" /> },
           { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
         ]}
@@ -304,6 +307,24 @@ export default function IndentureCommandCenter() {
         </div>
       </ActionBar>
       <PageContent>
+        {actionError && (
+          <div className="m-3 flex flex-col gap-3 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-body-sm text-danger">{actionError}</p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleApprove}
+                loading={isSubmitting}
+              >
+                Retry
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setActionError(null)}>
+                Dismiss
+              </Button>
+            </div>
+          </div>
+        )}
         {error && deals.length > 0 && (
           <div className="m-3 flex flex-col gap-3 rounded-lg border border-danger/20 bg-danger/10 p-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-body-sm text-danger">
@@ -360,23 +381,18 @@ export default function IndentureCommandCenter() {
         onClose={() => {
           setOverrideModal(null);
           setOverrideReason("");
+          setOverrideError(null);
         }}
         title="Override AI Decision"
         size="sm"
       >
-        {overrideModal && (
+        {overrideModal && overrideModal.deal && (
           <div className="space-y-4">
-            {(() => {
-              const deal = overrideModal.deal!;
-              return (
-                <>
-                  <p className="text-body-sm text-muted-foreground">
-                    Override <span className="font-mono text-success">{deal.ai_decision}</span> for
-                    <span className="font-medium text-foreground">{deal.deal_name}</span>
-                  </p>
-                </>
-              );
-            })()}
+            <p className="text-body-sm text-muted-foreground">
+              Override{" "}
+              <span className="font-medium text-foreground">{overrideModal.deal.ai_decision}</span> for{" "}
+              <span className="font-medium text-foreground">{overrideModal.deal.deal_name}</span>
+            </p>
             <Select
               label="New Decision"
               options={overrideActionOptions}
@@ -393,6 +409,11 @@ export default function IndentureCommandCenter() {
               placeholder="Explain why you're overriding the AI decision..."
               fullWidth
             />
+            {overrideError && (
+              <div className="rounded-lg border border-danger/20 bg-danger/10 p-3">
+                <p className="text-body-sm text-danger">{overrideError}</p>
+              </div>
+            )}
             <div className="flex justify-end gap-2 pt-4 border-t border-border">
               <Button variant="ghost" onClick={() => { setOverrideModal(null); setOverrideReason(""); }}>
                 Cancel
@@ -420,6 +441,11 @@ export default function IndentureCommandCenter() {
         size="lg"
       >
         <div className="space-y-4">
+          {simulationError && (
+            <div className="rounded-lg border border-danger/20 bg-danger/10 p-3">
+              <p className="text-body-sm text-danger">{simulationError}</p>
+            </div>
+          )}
           <Input
             label="Deal Name *"
             value={simulationState.form.deal_name}

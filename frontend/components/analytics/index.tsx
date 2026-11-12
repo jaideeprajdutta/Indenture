@@ -261,7 +261,7 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
                   <td className="px-4 py-2.5 font-medium text-foreground max-w-xs truncate whitespace-nowrap">{deal.deal_name}</td>
                   <td className="px-4 py-2.5 text-muted-foreground font-mono whitespace-nowrap">{deal.lender_name}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
-                    <Badge variant="default" className={`${config.bg} ${config.border} ${config.text}`} size="sm" dot>
+                    <Badge variant="default" className={`${config.bg} ${config.border} ${config.text}`} size="sm" dot dotClassName={config.dot}>
                       {deal.ai_decision}
                     </Badge>
                   </td>

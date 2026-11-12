@@ -6,6 +6,8 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: "default" | "success" | "warning" | "danger" | "info" | "neutral";
   size?: "sm" | "md";
   dot?: boolean;
+  /** Optional override for the dot color (e.g. a decision's `config.dot` class). */
+  dotClassName?: string;
 }
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
@@ -25,8 +27,17 @@ const sizeStyles: Record<BadgeSize, string> = {
   md: "px-2.5 py-1 text-label-sm gap-1.5",
 };
 
+const dotStyles: Record<BadgeVariant, string> = {
+  default: "bg-muted-foreground",
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
+  info: "bg-info",
+  neutral: "bg-muted-foreground",
+};
+
 export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
-  ({ children, variant = "default", size = "md", dot, className = "", ...props }, ref) => {
+  ({ children, variant = "default", size = "md", dot, dotClassName, className = "", ...props }, ref) => {
     return (
       <span
         ref={ref}
@@ -43,12 +54,7 @@ export const Badge = React.forwardRef<HTMLSpanElement, BadgeProps>(
           <span
             className={`
               w-1.5 h-1.5 rounded-full flex-shrink-0
-              ${variant === "success" && "bg-success"}
-              ${variant === "warning" && "bg-warning"}
-              ${variant === "danger" && "bg-danger"}
-              ${variant === "info" && "bg-info"}
-              ${variant === "neutral" && "bg-muted-foreground"}
-              ${variant === "default" && "bg-muted-foreground"}
+              ${dotClassName || dotStyles[variant]}
             `}
             aria-hidden="true"
           />

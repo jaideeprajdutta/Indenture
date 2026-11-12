@@ -8,11 +8,6 @@ export interface PageHeaderProps {
   icon?: React.ReactNode;
   subtitle?: string;
   actions?: React.ReactNode;
-  statusItems?: Array<{
-    label: string;
-    icon?: React.ReactNode;
-    status?: "connected" | "warning" | "error";
-  }>;
   navigation?: Array<{
     label: string;
     href: string;
@@ -30,7 +25,6 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
       icon,
       subtitle,
       actions,
-      statusItems,
       navigation,
       className = "",
       brandHref = "/",
@@ -105,19 +99,6 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
               {actions && <div className="flex items-center gap-2">{actions}</div>}
             </div>
           </div>
-
-          {(statusItems && statusItems.length > 0) && (
-            <div className="mt-3 flex flex-wrap items-center gap-3 text-caption font-mono text-muted-foreground">
-              {statusItems.map((item, i) => (
-                <span key={i} className="flex items-center gap-1.5">
-                  {item.icon && <span aria-hidden="true">{item.icon}</span>}
-                  <span className={item.status === "connected" ? "text-success" : item.status === "warning" ? "text-warning" : item.status === "error" ? "text-danger" : ""}>
-                    {item.label}
-                  </span>
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </header>
     );
@@ -166,13 +147,13 @@ export const FilterTabs = forwardRef<HTMLDivElement, FilterTabsProps>(
           flex flex-wrap gap-1
           ${className}
         `}
-        role="tablist"
+        role="group"
+        aria-label="Deal filters"
       >
         {filters.map((filter) => (
           <button
             key={filter.key}
-            role="tab"
-            aria-selected={activeKey === filter.key}
+            aria-pressed={activeKey === filter.key}
             onClick={() => onChange(filter.key)}
             className={`
               px-3 py-1.5 rounded-lg text-label-xs font-semibold tracking-wider
