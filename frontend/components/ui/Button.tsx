@@ -15,12 +15,12 @@ type ButtonVariant = NonNullable<ButtonProps["variant"]>;
 type ButtonSize = NonNullable<ButtonProps["size"]>;
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary/90",
-  secondary: "bg-surface-elevated text-foreground border border-border hover:bg-surface-sunken active:bg-surface",
-  ghost: "bg-transparent text-foreground hover:bg-muted active:bg-muted/80",
-  danger: "bg-danger text-danger-foreground hover:bg-danger-hover active:bg-danger/90",
-  success: "bg-success text-success-foreground hover:bg-success-hover active:bg-success/90",
-  outline: "bg-transparent text-foreground border border-border hover:bg-surface-elevated active:bg-surface",
+  primary: "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary/90 shadow-sm shadow-black/20",
+  secondary: "bg-surface-elevated text-foreground border border-border hover:bg-surface hover:border-border-strong active:bg-surface-sunken",
+  ghost: "bg-transparent text-foreground hover:bg-surface-elevated active:bg-surface",
+  danger: "bg-danger text-danger-foreground hover:bg-danger-hover active:bg-danger/90 shadow-sm shadow-black/20",
+  success: "bg-success text-success-foreground hover:bg-success-hover active:bg-success/90 shadow-sm shadow-black/20",
+  outline: "bg-transparent text-foreground border border-border hover:bg-surface-elevated hover:border-border-strong active:bg-surface",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
@@ -54,8 +54,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         type={props.type || "button"}
         disabled={isDisabled}
         className={`
-          inline-flex items-center justify-center font-medium rounded-md
-          transition-colors duration-150 ease-out
+          inline-flex items-center justify-center font-medium rounded-lg
+          transition-colors transition-shadow duration-150 ease-out
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background
           disabled:opacity-50 disabled:cursor-not-allowed
           ${variantStyles[variant]}

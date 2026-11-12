@@ -3,78 +3,86 @@
 @tailwind utilities;
 
 :root {
-  --background: #07080b;
-  --foreground: #f0f1f3;
-  --surface: #0b0c10;
-  --surface-elevated: #101216;
-  --surface-sunken: #050608;
-  --border: #1f2328;
-  --border-strong: #2d333b;
+  --background: #0a0b0f;
+  --foreground: #f4f2ed;
+  --surface: #101114;
+  --surface-elevated: #16181d;
+  --surface-sunken: #07080c;
+  --border: #26282d;
+  --border-strong: #3a3d44;
 
-  --primary: #1faa59;
-  --primary-hover: #1db85d;
-  --primary-foreground: #07080b;
+  --primary: #b99a5d;
+  --primary-hover: #c9a76b;
+  --primary-foreground: #0a0b0f;
 
-  --success: #1faa59;
-  --success-hover: #1db85d;
-  --success-foreground: #07080b;
-  --success-muted: rgba(31, 170, 89, 0.15);
+  --success: #7d9164;
+  --success-hover: #8b9f71;
+  --success-foreground: #0a0b0f;
+  --success-muted: rgba(125, 145, 100, 0.16);
 
-  --warning: #e8a01e;
-  --warning-hover: #f0b02a;
-  --warning-foreground: #07080b;
-  --warning-muted: rgba(232, 160, 30, 0.15);
+  --warning: #d9a95b;
+  --warning-hover: #e5b66a;
+  --warning-foreground: #0a0b0f;
+  --warning-muted: rgba(217, 169, 91, 0.16);
 
-  --danger: #e84d3a;
-  --danger-hover: #f06554;
-  --danger-foreground: #ffffff;
-  --danger-muted: rgba(232, 77, 58, 0.15);
+  --danger: #d96a5c;
+  --danger-hover: #e17b6e;
+  --danger-foreground: #f4f2ed;
+  --danger-muted: rgba(217, 106, 92, 0.18);
 
-  --info: #3b82f6;
-  --info-hover: #5a95f7;
-  --info-foreground: #ffffff;
-  --info-muted: rgba(59, 130, 246, 0.15);
+  --info: #8b9fbf;
+  --info-hover: #9aafcd;
+  --info-foreground: #0a0b0f;
+  --info-muted: rgba(139, 159, 191, 0.16);
 
-  --muted: #1f2328;
-  --muted-foreground: #7d848e;
+  --muted: #1d1f24;
+  --muted-foreground: #9a9586;
 
-  --font-sans: "Geist VF", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "Geist Mono VF", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --font-sans: "Geist VF", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono VF", "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
   --focus-ring: var(--primary);
   --focus-ring-offset: var(--background);
+  --radius: 0.625rem;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --background: #f8fafc;
-    --foreground: #0f172a;
+    --background: #faf9f7;
+    --foreground: #1c1a17;
     --surface: #ffffff;
-    --surface-elevated: #f1f5f9;
-    --surface-sunken: #e2e8f0;
-    --border: #e2e8f0;
-    --border-strong: #cbd5e1;
-    --primary: #15803d;
-    --primary-hover: #16a34a;
+    --surface-elevated: #f4f2ee;
+    --surface-sunken: #ece9e3;
+    --border: #e5e2dc;
+    --border-strong: #d1cdc4;
+
+    --primary: #7a5f2a;
+    --primary-hover: #8a6d33;
     --primary-foreground: #ffffff;
-    --success: #15803d;
-    --success-hover: #16a34a;
+
+    --success: #5c7a45;
+    --success-hover: #6b8a52;
     --success-foreground: #ffffff;
-    --success-muted: rgba(21, 128, 61, 0.12);
-    --warning: #b45309;
-    --warning-hover: #ca8a04;
+    --success-muted: rgba(92, 122, 69, 0.12);
+
+    --warning: #a3762a;
+    --warning-hover: #b58833;
     --warning-foreground: #ffffff;
-    --warning-muted: rgba(180, 83, 9, 0.12);
-    --danger: #b91c1c;
-    --danger-hover: #dc2626;
+    --warning-muted: rgba(163, 118, 42, 0.12);
+
+    --danger: #b03d30;
+    --danger-hover: #c14c3f;
     --danger-foreground: #ffffff;
-    --danger-muted: rgba(185, 28, 28, 0.12);
-    --info: #2563eb;
-    --info-hover: #3b82f6;
+    --danger-muted: rgba(176, 61, 48, 0.12);
+
+    --info: #4a6b8a;
+    --info-hover: #5a7b9a;
     --info-foreground: #ffffff;
-    --info-muted: rgba(37, 99, 235, 0.12);
-    --muted: #f1f5f9;
-    --muted-foreground: #64748b;
+    --info-muted: rgba(74, 107, 138, 0.12);
+
+    --muted: #f1efeb;
+    --muted-foreground: #6d6a63;
+
     --focus-ring: var(--primary);
     --focus-ring-offset: var(--background);
   }
@@ -125,7 +133,7 @@
 
   a:hover {
     color: var(--primary-hover);
-    text-decoration: underline;
+    text-decoration: none;
   }
 
   a:focus-visible {

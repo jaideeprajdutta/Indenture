@@ -77,12 +77,6 @@ export function DecisionDistribution({ analytics }: { analytics: AnalyticsData }
   );
 }
 
-interface SourceBarProps {
-  source: string;
-  count: number;
-  advanced: number;
-}
-
 export function SourceBars({ analytics }: { analytics: AnalyticsData }) {
   const sources = Object.entries(analytics.deals_by_source);
 

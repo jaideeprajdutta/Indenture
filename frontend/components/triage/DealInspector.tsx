@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button, Panel, PanelHeader, Badge } from "@/components/ui";
-import { Globe, ShieldAlert, Target, AlertTriangle, FileText, Building2, DollarSign, CheckCircle2, Activity } from "lucide-react";
+import { Globe, FileText, Activity } from "lucide-react";
 import { formatCurrency, formatDate, getDecisionConfig, normalizeDecision } from "@/lib/utils";
 import { MandateChecks } from "./MandateChecks";
 import { EvidenceBlock, MissingInfo, NextAction, EmailDraft } from "./ContentBlocks";

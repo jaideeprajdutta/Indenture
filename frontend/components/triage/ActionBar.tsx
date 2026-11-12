@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui";
-import { Settings, Activity, Globe, Check, Loader2, Activity as ActivityIcon } from "lucide-react";
+import { Settings, Activity, Globe, Check, Loader2 } from "lucide-react";
 import type { Deal } from "@/lib/hooks/useDeals";
 
 interface ActionBarProps {
@@ -45,7 +45,7 @@ export function DealActionBar({
       </Button>
       <Button
         variant="outline"
-        icon={crmRouting?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ActivityIcon className="w-4 h-4" />}
+        icon={crmRouting?.loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
         onClick={onRouteToCrm}
         disabled={isSubmitting || crmRouting?.loading}
         className="gap-2 border-info text-info hover:bg-info-muted"
@@ -112,7 +112,7 @@ export function HumanStatus({ deal, className = "" }: HumanStatusProps) {
         )}
         {deal.override_reason && (
           <span className="text-body-sm text-muted-foreground italic ml-auto">
-            "{deal.override_reason}"
+            &ldquo;{deal.override_reason}&rdquo;
           </span>
         )}
       </div>

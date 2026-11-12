@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, forwardRef } from "react";
+import React, { forwardRef } from "react";
 
 export interface TabItem {
   key: string;

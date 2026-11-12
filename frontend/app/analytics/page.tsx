@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { BarChart3, FileText, Settings } from "lucide-react";
+import { BarChart3, FileText, Settings, Activity, Database } from "lucide-react";
 import { PageShell, PageContent } from "@/components/layout";
 import { PageHeader, ActionBar } from "@/components/layout";
-import { Button, Tabs, TabPanels, TabPanel, type TabItem } from "@/components/ui";
+import { Button, Tabs, TabPanels, TabPanel, Panel, type TabItem } from "@/components/ui";
 import { MetricCard, DecisionDistribution, SourceBars, SourceTable, DealLogTable } from "@/components/analytics";
 import { formatCurrency } from "@/lib/utils";
 
@@ -154,10 +154,14 @@ export default function AnalyticsPage() {
   return (
     <PageShell>
       <PageHeader
-        title="INDENTURE — Analytics"
+        title="INDENTURE"
         icon={<BarChart3 className="w-5 h-5 text-muted-foreground" />}
+        statusItems={[
+          { label: "LLM Active", icon: <span className="w-1.5 h-1.5 rounded-full bg-success" />, status: "connected" },
+          { label: "Synced", icon: <Database className="w-3.5 h-3.5" />, status: "connected" },
+        ]}
         navigation={[
-          { label: "Triage", href: "/", icon: <FileText className="w-3.5 h-3.5" /> },
+          { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
           { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
         ]}
       />
@@ -180,7 +184,7 @@ export default function AnalyticsPage() {
         )}
         <TabPanels>
           <TabPanel tabKey="overview" activeKey={activeTab}>
-            {analytics && (
+            {analytics ? (
               <div className="space-y-4">
                 {/* KEY METRICS ROW */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -201,6 +205,12 @@ export default function AnalyticsPage() {
                 {/* SOURCE PERFORMANCE TABLE */}
                 <SourceTable analytics={analytics} deals={deals} />
               </div>
+            ) : (
+              <Panel variant="default" padding="md">
+                <p className="text-muted-foreground text-body-sm text-center py-8">
+                  No analytics data available yet. Run a deal simulation to populate metrics.
+                </p>
+              </Panel>
             )}
           </TabPanel>
 

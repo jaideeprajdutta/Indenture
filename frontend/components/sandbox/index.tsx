@@ -3,9 +3,9 @@
 import React from "react";
 import { Panel, PanelHeader, Input, Button, Select, Badge } from "@/components/ui";
 import { formatCurrency, getDecisionConfig } from "@/lib/utils";
-import { Plus, XCircle, CheckCircle2, FileText, ChevronDown } from "lucide-react";
+import { XCircle, CheckCircle2, ChevronDown } from "lucide-react";
 
-interface Lender {
+export interface Lender {
   name: string;
   min_ebitda: number;
   max_leverage: number;
@@ -13,15 +13,21 @@ interface Lender {
   qualitative_exclusion: string;
 }
 
-interface MandateForm {
-  min_ebitda: number | "";
-  max_leverage: number | "";
-  allowed_geography: string;
-  min_deal_size: number | "";
-  allowed_industry: string;
+export interface SandboxDealDetail {
+  deal_name: string;
+  deal_size: number | null;
+  industry: string | null;
+  geography: string | null;
+  ebitda: number | null;
+  leverage: number | null;
+  current_eligible?: boolean;
+  simulated_eligible?: boolean;
+  current_checks?: Record<string, boolean>;
+  simulated_checks?: Record<string, boolean>;
+  ai_decision: string;
 }
 
-interface SandboxResult {
+export interface SandboxResult {
   lender_name: string;
   current_mandate: Lender;
   simulated_mandate: Lender;
@@ -32,11 +38,19 @@ interface SandboxResult {
   unchanged: number;
   decision_distribution: Record<string, number>;
   deal_details: {
-    newly_eligible: any[];
-    no_longer_eligible: any[];
-    unchanged_eligible: any[];
-    unchanged_ineligible: any[];
+    newly_eligible: SandboxDealDetail[];
+    no_longer_eligible: SandboxDealDetail[];
+    unchanged_eligible: SandboxDealDetail[];
+    unchanged_ineligible: SandboxDealDetail[];
   };
+}
+
+export interface MandateForm {
+  min_ebitda: number | "";
+  max_leverage: number | "";
+  allowed_geography: string;
+  min_deal_size: number | "";
+  allowed_industry: string;
 }
 
 export function LenderSelector({ lenders, selectedLender, onChange }: { lenders: Lender[]; selectedLender: string; onChange: (value: string) => void }) {
@@ -57,9 +71,8 @@ export function LenderSelector({ lenders, selectedLender, onChange }: { lenders:
   );
 }
 
-export function MandateControls({ currentLender, form, onChange, onSimulate, onReset, loading }: { 
-  currentLender: Lender | undefined; 
-  form: MandateForm; 
+export function MandateControls({ form, onChange, onSimulate, onReset, loading }: {
+  form: MandateForm;
   onChange: (field: keyof MandateForm, value: string | number) => void;
   onSimulate: () => void;
   onReset: () => void;
@@ -169,7 +182,7 @@ export function DecisionDistribution({ result }: { result: SandboxResult }) {
 interface DealDetailSectionProps {
   title: string;
   count: number;
-  deals: any[];
+  deals: SandboxDealDetail[];
   icon: React.ReactNode;
   color: "success" | "danger" | "info" | "default";
   showDetails: Record<string, boolean>;
@@ -223,8 +236,8 @@ export function DealDetailSection({ title, count, deals, icon, color, showDetail
                   <td className="px-3 py-2 text-muted-foreground font-mono whitespace-nowrap">{formatCurrency(deal.deal_size)}</td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{deal.industry || "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground whitespace-nowrap">{deal.geography || "—"}</td>
-                  <td className="px-3 py-2 text-muted_foreground font-mono whitespace-nowrap">{deal.ebitda ? deal.ebitda.toLocaleString() : "—"}</td>
-                  <td className="px-3 py-2 text-muted_foreground font-mono whitespace-nowrap">{deal.leverage ? deal.leverage + "x" : "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground font-mono whitespace-nowrap">{deal.ebitda ? deal.ebitda.toLocaleString() : "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground font-mono whitespace-nowrap">{deal.leverage ? deal.leverage + "x" : "—"}</td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     <Badge variant="default" className={`${getDecisionConfig(deal.ai_decision).bg} ${getDecisionConfig(deal.ai_decision).border} ${getDecisionConfig(deal.ai_decision).text}`} size="sm">
                       {deal.ai_decision}

@@ -264,13 +264,14 @@ export default function IndentureCommandCenter() {
   return (
     <PageShell>
       <PageHeader
-        title="INDENTURE \u2014 HITL Triage"
+        title="INDENTURE"
         icon={<Activity className="w-5 h-5 text-muted-foreground" />}
         statusItems={[
           { label: "LLM Active", icon: <span className="w-1.5 h-1.5 rounded-full bg-success" />, status: "connected" },
           { label: "Synced", icon: <Database className="w-3.5 h-3.5" />, status: "connected" },
         ]}
         navigation={[
+          { label: "Analytics", href: "/analytics", icon: <Activity className="w-3.5 h-3.5" /> },
           { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
         ]}
       />
@@ -289,7 +290,7 @@ export default function IndentureCommandCenter() {
             disabled={isSimulating}
             loading={isSimulating}
           >
-            + Simulate
+            Simulate
           </Button>
           <Button
             variant="ghost"

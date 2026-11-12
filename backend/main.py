@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from supabase import Client, create_client
 
 from schemas import ApproveRequest, Decision
-from services import evaluate_qualitative_fit, filter_mandates, push_to_crm, normalize_deal_for_mandates
+from services import evaluate_qualitative_fit, filter_mandates, normalize_deal_for_mandates
 from crm_adapter import route_deal_to_crm
 from enrichment_adapter import enrich_deal
 
@@ -22,7 +22,10 @@ app = FastAPI(title="indenture-core")
 
 origins = [
     origin.strip()
-    for origin in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000").split(",")
+    for origin in os.getenv(
+        "BACKEND_CORS_ORIGINS",
+        "https://indenture-snowy.vercel.app,http://localhost:3000",
+    ).split(",")
     if origin.strip()
 ]
 app.add_middleware(
@@ -563,8 +566,8 @@ def override_deal(request: ApproveRequest) -> dict:
     current_record = current.data[0]
     previous_decision = current_record.get("human_decision") or current_record.get("ai_decision")
     
-    override_reason = getattr(request, 'override_reason', '')
-    new_decision = getattr(request, 'human_decision', '')
+    override_reason = request.override_reason
+    new_decision = request.human_decision
     
     if not new_decision or new_decision not in ["ADVANCE", "HOLD", "NURTURE", "REJECT"]:
         raise HTTPException(status_code=400, detail="Invalid human_decision. Must be one of ADVANCE, HOLD, NURTURE, REJECT")

@@ -1,58 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Settings, FileText } from "lucide-react";
+import { Settings, FileText, Activity, Database, BarChart3 } from "lucide-react";
 import { PageShell, PageContent } from "@/components/layout";
 import { PageHeader } from "@/components/layout";
 import { Button } from "@/components/ui";
-import { LenderSelector, MandateControls, SummaryCard, DecisionDistribution, DealDetailSection } from "@/components/sandbox";
+import { LenderSelector, MandateControls, SummaryCard, DecisionDistribution, DealDetailSection, type Lender, type SandboxResult, type MandateForm } from "@/components/sandbox";
 
 const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-interface Lender {
-  name: string;
-  min_ebitda: number;
-  max_leverage: number;
-  allowed_geography: string[];
-  qualitative_exclusion: string;
-}
-
-interface SandboxDealDetail {
-  deal_name: string;
-  deal_size: number | null;
-  industry: string | null;
-  geography: string | null;
-  ebitda: number | null;
-  leverage: number | null;
-  ai_decision: string;
-  simulated_checks?: Record<string, boolean>;
-}
-
-interface SandboxResult {
-  lender_name: string;
-  current_mandate: Lender;
-  simulated_mandate: Lender;
-  eligible_before: number;
-  eligible_after: number;
-  newly_eligible: number;
-  no_longer_eligible: number;
-  unchanged: number;
-  decision_distribution: Record<string, number>;
-  deal_details: {
-    newly_eligible: SandboxDealDetail[];
-    no_longer_eligible: SandboxDealDetail[];
-    unchanged_eligible: SandboxDealDetail[];
-    unchanged_ineligible: SandboxDealDetail[];
-  };
-}
-
-interface MandateForm {
-  min_ebitda: number | "";
-  max_leverage: number | "";
-  allowed_geography: string;
-  min_deal_size: number | "";
-  allowed_industry: string;
-}
 
 function CurrentMandate({ lender }: { lender: Lender | undefined }) {
   if (!lender) return null;
@@ -250,15 +205,15 @@ export default function MandateSandboxPage() {
   return (
     <PageShell>
       <PageHeader
-        title="INDENTURE — Mandate Sandbox"
+        title="INDENTURE"
         icon={<Settings className="w-5 h-5 text-muted-foreground" />}
         statusItems={[
           { label: "LLM Active", icon: <span className="w-1.5 h-1.5 rounded-full bg-success" />, status: "connected" },
-          { label: "Synced", icon: <FileText className="w-3.5 h-3.5" />, status: "connected" },
+          { label: "Synced", icon: <Database className="w-3.5 h-3.5" />, status: "connected" },
         ]}
         navigation={[
-          { label: "Triage", href: "/", icon: <FileText className="w-3.5 h-3.5" /> },
-          { label: "Analytics", href: "/analytics", icon: <Settings className="w-3.5 h-3.5" /> },
+          { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
+          { label: "Analytics", href: "/analytics", icon: <BarChart3 className="w-3.5 h-3.5" /> },
         ]}
       />
       <PageContent className="p-4 space-y-4">
@@ -287,7 +242,6 @@ export default function MandateSandboxPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <CurrentMandate lender={currentLender} />
           <MandateControls
-            currentLender={currentLender}
             form={form}
             onChange={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))}
             onSimulate={handleSimulate}

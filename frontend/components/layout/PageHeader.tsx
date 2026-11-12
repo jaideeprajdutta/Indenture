@@ -1,8 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
-import { Button } from "@/components/ui";
-import { Activity, Database, Settings, RotateCcw } from "lucide-react";
+import Link from "next/link";
 
 export interface PageHeaderProps {
   title: string;
@@ -21,6 +20,7 @@ export interface PageHeaderProps {
     active?: boolean;
   }>;
   className?: string;
+  brandHref?: string;
 }
 
 export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
@@ -33,15 +33,18 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
       statusItems,
       navigation,
       className = "",
+      brandHref = "/",
     },
     ref
   ) => {
+    const isBrand = title?.toUpperCase().startsWith("INDENTURE");
+
     return (
       <header
         ref={ref}
         className={`
           sticky top-0 z-50
-          bg-background/80 backdrop-blur-sm border-b border-border
+          bg-background/90 backdrop-blur-md border-b border-border/80
           ${className}
         `}
       >
@@ -54,8 +57,23 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
                 </span>
               )}
               <div>
-                <h1 className="text-heading-lg text-foreground">{title}</h1>
-                {subtitle && (
+                {isBrand ? (
+                  <Link
+                    href={brandHref}
+                    className="text-heading-lg text-foreground tracking-wide hover:text-foreground/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-sm"
+                    aria-label="Indenture home"
+                  >
+                    <h1 className="text-heading-lg text-inherit">INDENTURE</h1>
+                  </Link>
+                ) : (
+                  <>
+                    <h1 className="text-heading-lg text-foreground">{title}</h1>
+                    {subtitle && (
+                      <p className="text-body-sm text-muted-foreground mt-0.5">{subtitle}</p>
+                    )}
+                  </>
+                )}
+                {isBrand && subtitle && (
                   <p className="text-body-sm text-muted-foreground mt-0.5">{subtitle}</p>
                 )}
               </div>
@@ -64,15 +82,15 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
               {navigation && navigation.length > 0 && (
                 <nav className="flex items-center gap-1" aria-label="Page navigation">
                   {navigation.map((item) => (
-                    <a
+                    <Link
                       key={item.href}
                       href={item.href}
-                      className={`
-                        flex items-center gap-1.5 px-3 py-1.5 rounded-md
+                        className={`
+                        flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                         text-label-sm font-medium transition-colors duration-150
                         ${item.active
-                          ? "bg-surface-elevated text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated"
+                          ? "bg-surface-elevated text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated/80"
                         }
                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
                       `}
@@ -80,7 +98,7 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
                     >
                       {item.icon && <span aria-hidden="true">{item.icon}</span>}
                       {item.label}
-                    </a>
+                    </Link>
                   ))}
                 </nav>
               )}
@@ -119,7 +137,7 @@ export const ActionBar = forwardRef<HTMLDivElement, ActionBarProps>(
       <div
         ref={ref}
         className={`
-          px-4 py-2 border-b border-border bg-background/50 backdrop-blur-sm
+          px-4 py-2 border-b border-border/80 bg-background/70 backdrop-blur-sm
           flex flex-wrap items-center justify-between gap-3
           ${className}
         `}
@@ -157,12 +175,12 @@ export const FilterTabs = forwardRef<HTMLDivElement, FilterTabsProps>(
             aria-selected={activeKey === filter.key}
             onClick={() => onChange(filter.key)}
             className={`
-              px-3 py-1.5 rounded-md text-label-xs font-semibold tracking-wider
+              px-3 py-1.5 rounded-lg text-label-xs font-semibold tracking-wider
               transition-colors duration-150
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background
               ${activeKey === filter.key
                 ? "bg-surface-elevated text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated"
+                : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated/80"
               }
             `}
           >

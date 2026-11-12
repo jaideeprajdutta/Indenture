@@ -1,38 +1,6 @@
 """CRM Adapter - Abstract interface for CRM integrations (HubSpot, etc.)"""
 
 import os
-from dataclasses import dataclass
-from typing import Optional
-from datetime import datetime
-
-
-@dataclass
-class CRMResult:
-    """Result of a CRM routing operation."""
-    success: bool
-    provider: str
-    record_id: Optional[str] = None
-    error: Optional[str] = None
-
-
-class CRMAdapter:
-    """Base CRM adapter interface."""
-    
-    def __init__(self):
-        self.enabled = False
-        self.provider_name = "base"
-    
-    def is_enabled(self) -> bool:
-        return self.enabled
-    
-    def route_deal(self, deal_data: dict) -> CRMResult:
-        """Route a deal to the CRM. To be implemented by subclasses."""
-        raise NotImplementedError
-
-
-"""CRM Adapter - Abstract interface for CRM integrations (HubSpot, etc.)"""
-
-import os
 import json
 from dataclasses import dataclass
 from typing import Optional

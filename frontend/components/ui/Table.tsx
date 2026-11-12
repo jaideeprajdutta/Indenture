@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef } from "react";
+import React from "react";
 
 export interface Column<T> {
   key: string;
