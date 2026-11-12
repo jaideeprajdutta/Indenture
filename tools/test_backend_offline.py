@@ -7,6 +7,7 @@ Usage:  python tools/test_backend_offline.py
 """
 import json
 import os
+import re
 import sys
 import itertools
 from pathlib import Path
@@ -22,6 +23,28 @@ os.environ.pop("HUBSPOT_ACCESS_TOKEN", None)
 
 from fastapi.testclient import TestClient  # noqa: E402
 import main  # noqa: E402
+import schemas  # noqa: E402
+import services  # noqa: E402
+
+
+def _deterministic_ai_eval(deal: dict, lender: dict) -> schemas.DealEvaluation:
+    """Deterministic stand-in for the Groq-backed qualitative evaluator.
+
+    evaluate_qualitative_fit is a real network call (and the backend .env is
+    loaded by main.py), so without this stub the 'offline' harness would make
+    live LLM requests and produce non-deterministic decisions.
+    """
+    return schemas.DealEvaluation(
+        decision=schemas.Decision.ADVANCE,
+        evidence="Deterministic stub evidence (offline harness)",
+        email_draft="Deterministic stub draft",
+        missing_info="",
+        next_best_action="Deterministic next action",
+    )
+
+
+services.evaluate_qualitative_fit = _deterministic_ai_eval
+main.evaluate_qualitative_fit = _deterministic_ai_eval
 
 
 class Resp:
@@ -41,6 +64,40 @@ class InsertQuery:
 
 # Columns whose default is supplied by Postgres, not by the application.
 DB_DEFAULTS = {"deal_history": {"created_at": "2026-01-02T00:00:00+00:00"}}
+
+
+def _parse_schema_columns() -> dict[str, set]:
+    """Parse supabase/schema.sql into {table: set(columns)}.
+
+    The schema file is the single source of truth for column names, so the fake
+    Supabase can be schema-faithful: any write to a column that does not exist
+    raises exactly the error PostgREST returns in production (PGRST204). This is
+    the regression guard for the production approval/override failure caused by
+    phantom-column writes (effective_decision / mandate_reevaluation /
+    ai_reevaluation had no backing columns in deal_queue).
+    """
+    schema_path = Path(__file__).resolve().parents[1] / "supabase" / "schema.sql"
+    columns: dict[str, set] = {}
+    current: str | None = None
+    for line in schema_path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        m = re.match(r"create table if not exists (\w+) \(", stripped)
+        if m:
+            current = m.group(1)
+            columns[current] = set()
+            continue
+        if current is None:
+            continue
+        if stripped.startswith(");"):
+            current = None
+            continue
+        m = re.match(r"^(\w+)\s", stripped)
+        if m and not stripped.startswith("--"):
+            columns[current].add(m.group(1))
+    return columns
+
+
+SCHEMA_COLUMNS = _parse_schema_columns()
 
 
 class Query:
@@ -95,6 +152,26 @@ class Query:
             rows = rows[: self.limit_n]
         return rows
 
+    def _validate_columns(self, payload: dict, action: str) -> None:
+        """Reject writes to columns that do not exist, like PostgREST does.
+
+        Production PostgREST returns HTTP 400 with error code PGRST204
+        ("Could not find the '<col>' column of '<table>' in the schema cache")
+        for exactly this situation. Validating here means the harness fails
+        loudly on phantom-column writes instead of silently diverging from
+        production behavior.
+        """
+        known = SCHEMA_COLUMNS.get(self.table)
+        if known is None:
+            return
+        unknown = [col for col in payload if col not in known]
+        if unknown:
+            raise ValueError(
+                f"PGRST204 simulation: Could not find the '{unknown[0]}' column "
+                f"of '{self.table}' in the schema cache "
+                f"(offline harness, {action} payload)"
+            )
+
     def execute(self):
         if self.to_delete:
             keep = [r for r in self.rows if not self._match(r)]
@@ -115,6 +192,7 @@ class Query:
         items = payload if isinstance(payload, list) else [payload]
         out = []
         for item in items:
+            self._validate_columns(item, "insert")
             row = dict(item)
             if "id" not in row:
                 row["id"] = next(self.store["_ids"])
@@ -127,6 +205,7 @@ class Query:
         return InsertQuery(out)
 
     def update(self, patch):
+        self._validate_columns(patch, "update")
         self.patch = patch
         return self
 
@@ -322,6 +401,8 @@ def main_test():
     check("human_status persisted", row["human_status"] == "OVERRIDDEN", row["human_status"])
     check("override_reason persisted", row["override_reason"] == "Test override reason")
     check("crm_status persisted", row["crm_status"] == "ROUTED", str(row.get("crm_status")))
+    check("no phantom effective_decision column written",
+          "effective_decision" not in row, str(row.get("effective_decision")))
     events = [h["event_type"] for h in fake.store["deal_history"]]
     check("HUMAN_OVERRIDE recorded", "HUMAN_OVERRIDE" in events, str(events))
     check("CRM_ROUTED recorded", "CRM_ROUTED" in events, str(events))
@@ -342,9 +423,14 @@ def main_test():
     body = r.json()
     check("status 200", r.status_code == 200, str(r.status_code))
     check("status APPROVED", body.get("status") == "APPROVED", str(body.get("status")))
+    # effective_decision is derived in memory (ai_decision confirmed by the
+    # human) and returned in the response - it is NOT a deal_queue column.
+    check("effective_decision HOLD in response",
+          body.get("effective_decision") == "HOLD", str(body.get("effective_decision")))
     row = fake.store["deal_queue"][0]
     check("human_status APPROVED", row["human_status"] == "APPROVED", row["human_status"])
-    check("effective_decision set", row.get("effective_decision") == "HOLD", str(row.get("effective_decision")))
+    check("no phantom effective_decision column written",
+          "effective_decision" not in row, str(row.get("effective_decision")))
     events = [h["event_type"] for h in fake.store["deal_history"]]
     check("HUMAN_APPROVE recorded", "HUMAN_APPROVE" in events, str(events))
 
@@ -357,12 +443,24 @@ def main_test():
     check("status 200", r.status_code == 200, str(r.status_code))
     check("success true", body.get("success") is True, str(body.get("error")))
     check("provider demo", body.get("provider") == "demo", str(body.get("provider")))
-    check("mandate_reevaluation present", "mandate_reevaluation" in body)
-    check("ai_reevaluation present", "ai_reevaluation" in body)
+    check("mandate_reevaluation returned in response", body.get("mandate_reevaluation") is not None,
+          str(body.get("mandate_reevaluation")))
+    check("ai_reevaluation returned in response", body.get("ai_reevaluation") is not None,
+          str(body.get("ai_reevaluation")))
+    check("ai_reevaluation decision ADVANCE",
+          (body.get("ai_reevaluation") or {}).get("decision") == "ADVANCE",
+          str(body.get("ai_reevaluation")))
     row = fake.store["deal_queue"][0]
     check("enrichment_status ENRICHED", row.get("enrichment_status") == "ENRICHED", str(row.get("enrichment_status")))
     check("website enriched", bool(row.get("website")), str(row.get("website")))
     check("revenue enriched", row.get("revenue") is not None, str(row.get("revenue")))
+    # Re-evaluated AI decision itself IS a real column and must persist.
+    check("re-evaluated ai_decision persisted", row.get("ai_decision") == "ADVANCE",
+          str(row.get("ai_decision")))
+    check("no phantom ai_reevaluation column written",
+          "ai_reevaluation" not in row, str(row.get("ai_reevaluation")))
+    check("no phantom mandate_reevaluation column written",
+          "mandate_reevaluation" not in row, str(row.get("mandate_reevaluation")))
 
     r = client.post(f"/deals/{FIXTURE_DEAL['id']}/enrich", json={
         "deal_name": "__wrong__", "lender_name": FIXTURE_DEAL["lender_name"]})
@@ -410,6 +508,31 @@ def main_test():
           [h["created_at"] for h in hist] == sorted(h["created_at"] for h in hist))
     check("no history row leaked to another deal",
           all(h["lender_name"] == FIXTURE_DEAL["lender_name"] for h in hist))
+
+    section("Fake Supabase schema-faithfulness (PGRST204 regression guard)")
+    # These writes are exactly what broke production: POST /action/approve
+    # patched effective_decision (id=eq.N) and POST /action/override included
+    # it in its PATCH, but deal_queue has no such column. PostgREST rejects
+    # with HTTP 400 PGRST204; the harness must do the same.
+    try:
+        fake.table("deal_queue").update({"effective_decision": "HOLD"}).eq("id", 999_999).execute()
+        check("unknown update column rejected", False, "no error raised")
+    except ValueError as e:
+        check("unknown update column rejected",
+              "PGRST204" in str(e) and "effective_decision" in str(e), str(e))
+    try:
+        fake.table("deal_queue").insert({"deal_name": "x", "mandate_reevaluation": {}}).execute()
+        check("unknown insert column rejected", False, "no error raised")
+    except ValueError as e:
+        check("unknown insert column rejected",
+              "PGRST204" in str(e) and "mandate_reevaluation" in str(e), str(e))
+    try:
+        fake.table("deal_queue").update({"human_status": "PENDING"}).eq("id", 999_999).execute()
+        fake.table("deal_history").insert({"deal_queue_id": 1, "deal_name": "x",
+                                           "lender_name": "y", "event_type": "TEST"}).execute()
+        check("known columns accepted", True)
+    except ValueError as e:
+        check("known columns accepted", False, str(e))
 
     section("Summary")
     passed = sum(1 for _, ok, _ in results if ok)

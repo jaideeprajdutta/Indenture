@@ -452,11 +452,10 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
                 if original_mandate_checks:
                     reevaluation = compare_mandate_checks(original_mandate_checks, new_mandate_checks)
                     mandate_reevaluation = reevaluation.model_dump()
-                    
-                    # Store mandate re-evaluation in deal_queue
-                    supabase.table("deal_queue").update({
-                        "mandate_reevaluation": mandate_reevaluation,
-                    }).eq("id", deal_queue_id).execute()
+                    # Note: deal_queue has no mandate_reevaluation / ai_reevaluation
+                    # columns (verified against live PostgREST schema cache -
+                    # PGRST204). Re-evaluation results are returned in the API
+                    # response and recorded in deal_history instead.
             
             # Run AI re-evaluation with enriched data
             if current_lender:
@@ -472,23 +471,24 @@ def enrich_deal(supabase, deal_queue_id: int, deal_name: str, lender_name: str,
                         "previous_decision": original_ai_decision,
                         "previous_evidence": original_evidence,
                     }
-                    
-                    # Update deal_queue with new AI decision
+
+                    # Persist the re-evaluated AI decision (all real columns;
+                    # ai_reevaluation itself has no column and is returned in
+                    # the API response instead).
                     supabase.table("deal_queue").update({
                         "ai_decision": new_decision,
                         "evidence": ai_eval.evidence,
                         "email_draft": ai_eval.email_draft,
                         "missing_info": ai_eval.missing_info,
                         "next_best_action": ai_eval.next_best_action,
-                        "ai_reevaluation": ai_reevaluation,
                     }).eq("id", deal_queue_id).execute()
-                    
+
                     # Record AI re-evaluation in history
                     from main import record_history
                     reason = f"AI re-evaluation after enrichment. Previous: {original_ai_decision} → New: {new_decision}"
                     if mandate_reevaluation and mandate_reevaluation.get("eligibility_changed"):
                         reason += f" (Mandate eligibility changed: {mandate_reevaluation.get('was_eligible')} → {mandate_reevaluation.get('now_eligible')})"
-                    
+
                     record_history(
                         supabase=supabase,
                         deal_queue_id=deal_queue_id,

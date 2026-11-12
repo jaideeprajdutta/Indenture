@@ -528,13 +528,12 @@ def approve_deal(request: ApproveRequest) -> dict:
     record_history(supabase, current_record["id"], request.deal_name, request.lender_name,
                   "HUMAN_APPROVE", previous_decision, "APPROVE", "Human approved AI decision")
 
-    # Effective decision: human confirms AI decision, so use the AI decision
+    # Effective decision: human confirms AI decision, so use the AI decision.
+    # Note: deal_queue has no effective_decision column (verified against live
+    # PostgREST schema cache - PGRST204). The final decision is derived from
+    # human_status/human_decision + ai_decision and returned in the response;
+    # CRM routing below uses this in-memory value.
     effective_decision = current_record.get("ai_decision")
-    
-    # Update deal with effective decision
-    supabase.table("deal_queue").update({
-        "effective_decision": effective_decision,
-    }).eq("id", current_record["id"]).execute()
 
     # Route to CRM using the CRM adapter
     crm_result = route_deal_to_crm(supabase, current_record["id"], request.deal_name, request.lender_name, 
@@ -578,7 +577,6 @@ def override_deal(request: ApproveRequest) -> dict:
             "human_status": "OVERRIDDEN",
             "human_decision": new_decision,
             "override_reason": override_reason,
-            "effective_decision": new_decision,
         })
         .eq("deal_name", request.deal_name)
         .eq("lender_name", request.lender_name)

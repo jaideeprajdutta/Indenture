@@ -43,8 +43,6 @@ export interface Deal {
   ownership_type: string | null;
   transaction_type: string | null;
   mandate_reevaluation: Record<string, unknown> | null;
-  ai_reevaluation: Record<string, unknown> | null;
-  effective_decision: string | null;
   created_at: string;
 }
 
