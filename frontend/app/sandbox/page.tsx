@@ -185,7 +185,7 @@ export default function MandateSandboxPage() {
       <PageShell>
         <PageContent className="flex items-center justify-center p-6">
           <div className="bg-surface border border-border p-6 max-w-lg text-center">
-            <h2 className="text-heading-md text-foreground mb-2">Failed to load sandbox</h2>
+            <h2 className="text-heading-md text-foreground mb-2">Scenario analysis unavailable</h2>
             <p className="text-body-sm text-muted-foreground font-mono">{lendersError}</p>
             <Button
               variant="primary"
@@ -206,11 +206,12 @@ export default function MandateSandboxPage() {
     <PageShell>
       <PageHeader
         title="INDENTURE"
+        subtitle="Scenario Analysis"
         icon={<Settings className="w-5 h-5 text-muted-foreground" />}
         navigation={[
-          { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
-          { label: "Analytics", href: "/analytics", icon: <BarChart3 className="w-3.5 h-3.5" /> },
-          { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" />, active: true },
+          { label: "Deal Ops", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
+          { label: "Pipeline Intel", href: "/analytics", icon: <BarChart3 className="w-3.5 h-3.5" /> },
+          { label: "Scenarios", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" />, active: true },
         ]}
       />
       <PageContent className="p-4 space-y-4">

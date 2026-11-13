@@ -24,7 +24,7 @@ export function CRMPanel({ deal, className = "" }: CRMPanelProps) {
   return (
     <Panel variant="default" padding="md" className={className}>
       <PanelHeader
-        title="CRM Routing"
+        title="CRM Handoff"
         icon={<Activity className="w-4 h-4" />}
       />
       <div className="flex flex-wrap items-center gap-4 text-body-sm">

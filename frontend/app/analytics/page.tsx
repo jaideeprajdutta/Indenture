@@ -6,8 +6,8 @@ import { BarChart3, FileText, Settings, Activity } from "lucide-react";
 import { PageShell, PageContent } from "@/components/layout";
 import { PageHeader, ActionBar } from "@/components/layout";
 import { Button, Tabs, TabPanels, TabPanel, Panel, type TabItem } from "@/components/ui";
-import { MetricCard, DecisionDistribution, SourceBars, SourceTable, DealLogTable } from "@/components/analytics";
-import { formatCurrency } from "@/lib/utils";
+import { MetricCard, DecisionDistribution, SourceBars, SourceTable, DealLogTable, PipelineHealth, type DealLogRow } from "@/components/analytics";
+import { formatCurrency, normalizeDecision } from "@/lib/utils";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -26,19 +26,8 @@ interface AnalyticsData {
   rejected_by_source: Record<string, number>;
 }
 
-interface DealLogRow {
-  id: number;
-  deal_name: string;
-  lender_name: string;
-  deal_size: number | null;
-  source: string | null;
-  ai_decision: string;
-  human_status: string;
-  created_at: string;
-}
-
 const tabItems: TabItem[] = [
-  { key: "overview", label: "Overview", icon: <BarChart3 className="w-4 h-4" /> },
+  { key: "overview", label: "Pipeline Overview", icon: <BarChart3 className="w-4 h-4" /> },
   { key: "deals", label: "Deal Log", icon: <FileText className="w-4 h-4" /> },
 ];
 
@@ -77,7 +66,7 @@ export default function AnalyticsPage() {
     try {
       const { data, error: queryError } = await supabase
         .from("deal_queue")
-        .select("id,deal_name,lender_name,deal_size,source,ai_decision,human_status,created_at")
+        .select("id,deal_name,lender_name,deal_size,source,ai_decision,human_status,human_decision,missing_info,next_best_action,crm_status,crm_error,created_at")
         .order("created_at", { ascending: false });
       if (requestId !== dealsRequestIdRef.current) return;
       if (queryError) throw queryError;
@@ -140,7 +129,7 @@ export default function AnalyticsPage() {
       <PageShell>
         <PageContent className="flex items-center justify-center p-6">
           <div className="bg-surface border border-border p-6 max-w-lg text-center">
-            <h2 className="text-heading-md text-foreground mb-2">Failed to load analytics</h2>
+            <h2 className="text-heading-md text-foreground mb-2">Pipeline intelligence unavailable</h2>
             <p className="text-body-sm text-muted-foreground font-mono">{pageError}</p>
             <Button variant="primary" size="sm" className="mt-4" onClick={handleRetry} loading={refreshing}>
               Retry
@@ -155,11 +144,12 @@ export default function AnalyticsPage() {
     <PageShell>
       <PageHeader
         title="INDENTURE"
+        subtitle="Pipeline Intelligence"
         icon={<BarChart3 className="w-5 h-5 text-muted-foreground" />}
         navigation={[
-          { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
-          { label: "Analytics", href: "/analytics", icon: <BarChart3 className="w-3.5 h-3.5" />, active: true },
-          { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
+          { label: "Deal Ops", href: "/", icon: <Activity className="w-3.5 h-3.5" /> },
+          { label: "Pipeline Intel", href: "/analytics", icon: <BarChart3 className="w-3.5 h-3.5" />, active: true },
+          { label: "Scenarios", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
         ]}
       />
       <ActionBar>
@@ -183,17 +173,28 @@ export default function AnalyticsPage() {
           <TabPanel tabKey="overview" activeKey={activeTab}>
             {analytics ? (
               <div className="space-y-4">
-                {/* KEY METRICS ROW */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                  <MetricCard label="Total Deals" value={analytics.total_deals} />
-                  <MetricCard label="ADVANCE %" value={`${analytics.advance_pct}%`} color="success" />
-                  <MetricCard label="HOLD %" value={`${analytics.hold_pct}%`} color="warning" />
-                  <MetricCard label="NURTURE %" value={`${analytics.nurture_pct}%`} color="info" />
-                  <MetricCard label="REJECT %" value={`${analytics.reject_pct}%`} color="danger" />
-                  <MetricCard label="Avg Deal Size" value={formatCurrency(analytics.avg_deal_size)} />
-                </div>
+                {/* PIPELINE METRICS — counts from the live deal log; nothing estimated */}
+                {(() => {
+                  const pending = deals.filter((d) => (d.human_status || "PENDING") === "PENDING").length;
+                  const qualified = deals.filter((d) => normalizeDecision(d.ai_decision) === "ADVANCE").length;
+                  const rejected = deals.filter((d) => normalizeDecision(d.ai_decision) === "REJECT").length;
+                  const humanDecisions = deals.filter((d) => d.human_status === "APPROVED" || d.human_status === "OVERRIDDEN").length;
+                  return (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <MetricCard label="Total Opportunities" value={analytics.total_deals} />
+                      <MetricCard label="Awaiting Review" value={pending} color="warning" />
+                      <MetricCard label="Qualified (ADVANCE)" value={qualified} color="success" />
+                      <MetricCard label="Rejected" value={rejected} color="danger" />
+                      <MetricCard label="Human Decisions" value={humanDecisions} color="info" />
+                      <MetricCard label="Avg Deal Size" value={formatCurrency(analytics.avg_deal_size)} />
+                    </div>
+                  );
+                })()}
 
-                {/* DECISION DISTRIBUTION + DEALS BY SOURCE */}
+                {/* OPERATIONAL BOTTLENECKS + FOLLOW-UP QUEUE */}
+                <PipelineHealth deals={deals} />
+
+                {/* DECISION DISTRIBUTION + OPPORTUNITIES BY SOURCE */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <DecisionDistribution analytics={analytics} />
                   <SourceBars analytics={analytics} />
@@ -205,7 +206,7 @@ export default function AnalyticsPage() {
             ) : (
               <Panel variant="default" padding="md">
                 <p className="text-muted-foreground text-body-sm text-center py-8">
-                  No analytics data available yet. Run a deal simulation to populate metrics.
+                  No pipeline data yet — decision metrics appear here as opportunities are processed.
                 </p>
               </Panel>
             )}

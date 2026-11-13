@@ -17,10 +17,10 @@ import { useSimulation } from "@/lib/hooks/useSimulation";
 const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const filterOptions = [
-  { key: "PENDING", label: "PENDING" },
-  { key: "ALL", label: "ALL" },
-  { key: "APPROVED", label: "APPROVED" },
-  { key: "REJECTED", label: "REJECTED" },
+  { key: "PENDING", label: "Awaiting Review" },
+  { key: "ALL", label: "All" },
+  { key: "APPROVED", label: "Approved" },
+  { key: "REJECTED", label: "Rejected" },
 ];
 
 const overrideActionOptions = [
@@ -245,12 +245,31 @@ export default function IndentureCommandCenter() {
     filter === "ALL" ? true : (d.human_status || "PENDING") === filter
   );
 
+  /* Outstanding-work counts for the filter pills — makes the remaining
+     operational workload visible at a glance. */
+  const reviewCount = deals.filter((d) => (d.human_status || "PENDING") === "PENDING").length;
+  const approvedCount = deals.filter((d) => d.human_status === "APPROVED").length;
+  const rejectedCount = deals.filter((d) => d.human_status === "REJECTED").length;
+  const filterCounts: Record<string, number> = {
+    PENDING: reviewCount,
+    ALL: deals.length,
+    APPROVED: approvedCount,
+    REJECTED: rejectedCount,
+  };
+
+  const emptyMessages: Record<string, string> = {
+    PENDING: "Queue clear — no opportunities awaiting review",
+    ALL: "No opportunities yet",
+    APPROVED: "No approved opportunities yet",
+    REJECTED: "No rejected opportunities yet",
+  };
+
   if (error && deals.length === 0 && !loading) {
     return (
       <PageShell>
         <PageContent className="flex items-center justify-center p-6">
           <div className="bg-surface border border-border p-6 max-w-lg text-center">
-            <h2 className="text-heading-md text-foreground mb-2">System Error</h2>
+            <h2 className="text-heading-md text-foreground mb-2">Pipeline unavailable</h2>
             <p className="text-body-sm text-muted-foreground font-mono">{error}</p>
             <Button
               variant="primary"
@@ -271,16 +290,17 @@ export default function IndentureCommandCenter() {
     <PageShell>
       <PageHeader
         title="INDENTURE"
+        subtitle="Deal Operations"
         icon={<Activity className="w-5 h-5 text-muted-foreground" />}
         navigation={[
-          { label: "Triage", href: "/", icon: <Activity className="w-3.5 h-3.5" />, active: true },
-          { label: "Analytics", href: "/analytics", icon: <Activity className="w-3.5 h-3.5" /> },
-          { label: "Sandbox", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
+          { label: "Deal Ops", href: "/", icon: <Activity className="w-3.5 h-3.5" />, active: true },
+          { label: "Pipeline Intel", href: "/analytics", icon: <Activity className="w-3.5 h-3.5" /> },
+          { label: "Scenarios", href: "/sandbox", icon: <Settings className="w-3.5 h-3.5" /> },
         ]}
       />
       <ActionBar>
         <FilterTabs
-          filters={filterOptions.map((f) => ({ key: f.key, label: f.label }))}
+          filters={filterOptions.map((f) => ({ key: f.key, label: f.label, count: filterCounts[f.key] }))}
           activeKey={filter}
           onChange={setFilter}
         />
@@ -293,7 +313,7 @@ export default function IndentureCommandCenter() {
             disabled={isSimulating}
             loading={isSimulating}
           >
-            Simulate
+            New Opportunity
           </Button>
           <Button
             variant="ghost"
@@ -302,7 +322,7 @@ export default function IndentureCommandCenter() {
             onClick={() => handleFetchDeals(true)}
             disabled={isRefreshing}
           >
-            Sync
+            Refresh
           </Button>
         </div>
       </ActionBar>
@@ -347,7 +367,7 @@ export default function IndentureCommandCenter() {
                 deals={filteredDeals}
                 selectedDealId={selectedDeal?.id ?? null}
                 loading={loading}
-                emptyMessage="Inbox Zero"
+                emptyMessage={emptyMessages[filter] || "No opportunities"}
                 onSelectDeal={handleSelectDeal}
               />
             </div>

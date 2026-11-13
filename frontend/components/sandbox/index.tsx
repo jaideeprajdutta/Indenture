@@ -120,7 +120,7 @@ export function MandateControls({ form, onChange, onSimulate, onReset, loading }
         />
         <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border">
           <Button onClick={onSimulate} disabled={loading} className="flex-1 gap-2" icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 15.632l-2.54-2.54a6 6 0 10-8.485 8.486l2.959 2.96a1 1 0 001.415 0l2.392-2.391a1 1 0 000-1.415l-2.254-2.253a4 4 0 115.657-5.657l2.539 2.54" /></svg>}>
-            Run Simulation
+            Run Scenario
           </Button>
           <Button variant="ghost" onClick={onReset} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}>
             Reset

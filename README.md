@@ -1,268 +1,205 @@
 # Indenture
 
-Private Credit Deal Intelligence & Routing Engine.
+**AI-powered Deal Intelligence and Operations Platform for private-credit teams.**
 
-A deterministic-semantic deal triage system for private credit origination. Combines mandate filtering, LLM qualitative reasoning, human-in-the-loop review, enrichment-driven re-evaluation, and CRM routing with full audit trail.
+Live application: **https://indenture-snowy.vercel.app**
 
-## Problem
+Indenture turns incoming deal opportunities into structured, evaluated and actionable pipeline decisions. Every opportunity is checked against lender mandates with deterministic criteria, evaluated with AI-assisted qualitative reasoning, reviewed by a human decision-maker, enriched with company intelligence, and handed off to CRM — with a complete decision history recorded at every step.
 
-Private credit origination teams receive inbound deals that must be quickly triaged against lender mandates. The process requires:
-- **Deterministic mandate checks** (EBITDA, leverage, geography) — hard filters
-- **Qualitative reasoning** — LLM evaluates deal fit against lender's qualitative exclusion criteria
-- **Human review** — Approve or override AI decisions with rationale
-- **Enrichment** — External data (Apollo.io or demo provider) to fill information gaps
-- **Re-evaluation** — Updated mandate checks and AI reasoning after enrichment
-- **CRM routing** — Final decision routed to CRM (HubSpot/Attio) with audit trail
+It is built for the people who run the deal process: deal operations, pipeline management, and business operations roles. The product mirrors how private-credit origination teams actually work — opportunity qualification, decision support with human oversight, and operational handoffs — rather than presenting itself as a collection of scripts or a generic dashboard.
 
-Indenture automates this workflow end-to-end with a clean audit trail at every step.
+## The Business Problem
+
+Private-credit origination teams face a set of operational challenges that generic CRMs and spreadsheets don't solve:
+
+- **Incoming deal information is fragmented.** Opportunities arrive from webhooks, referrals, conferences and outreach in different shapes, with inconsistent fields.
+- **Every opportunity must be qualified against lender mandates.** EBITDA floors, leverage ceilings, geography and industry exclusions — hard filters that are currently applied by hand.
+- **Missing information creates delays.** Deals stall in review because nobody has surfaced *what* is missing or *what the next step should be*.
+- **Decision-making needs to be consistent and defensible.** Two reviewers looking at the same deal should reach comparable conclusions, and every decision should be traceable to its reasoning.
+- **CRM handoffs and pipeline visibility matter.** A decided deal that never reaches the CRM is lost work; a pipeline nobody can inspect is a pipeline nobody can manage.
+
+## The Solution
+
+Indenture operationalizes this workflow end-to-end:
+
+1. **Structured intake** — an inbound opportunity (webhook or manual entry) is normalized against a lender's mandate and persisted with consistent fields.
+2. **Automated evaluation** — deterministic mandate checks (EBITDA, leverage, geography, deal size, industry) run first; an LLM then evaluates qualitative fit and produces a recommendation — **ADVANCE**, **HOLD**, **NURTURE** or **REJECT** — with written evidence, identified information gaps, and a suggested next best action.
+3. **Human review** — a decision-maker confirms the recommendation or overrides it with a rationale. Nothing routes to CRM without a human decision.
+4. **Company enrichment** — on demand, the deal is enriched with company intelligence (website, revenue, headcount) and mandate checks and the AI evaluation are re-run against the fuller picture.
+5. **CRM handoff** — the effective decision is routed to the CRM with a recorded status, record ID, and error trail.
+6. **Pipeline intelligence** — operational views surface what's outstanding: what's awaiting review, what's stuck, what failed, and what needs attention first.
+
+## Product Capabilities
+
+### 1. Deal Operations
+The working queue for the deal process. Every incoming opportunity appears with its lender, size, source and current recommendation. Filter tabs show the outstanding workload at a glance (awaiting review / approved / rejected), rows surface "Needs info" and review-age signals inline, and the inspector presents evidence, mandate check results, missing information and the recommended next action.
+
+### 2. Pipeline Intelligence
+Operational analytics built only from data the system actually records: total opportunities, decisions awaiting review, qualified (ADVANCE) and rejected counts, human decisions made, average deal size, decision distribution, and opportunities by source with advance/reject rates. No estimated or invented metrics.
+
+### 3. Pipeline Health & Needs Attention First
+The operational bottleneck view. Four mini-stats quantify where work is stuck — opportunities in review 7+ days, approved decisions awaiting CRM handoff, handoff failures, and HOLDs blocked on missing information. A prioritized **Needs Attention First** queue ranks the top items by operational impact — failed handoffs first, then decisions waiting on their handoff, then stale reviews, then missing-info HOLDs — with an explained reason for every item. Computed from the existing deal log; every surface signal is real.
+
+### 4. Human Review & Decision History
+Approve or override any AI recommendation, with a mandatory rationale on override. Every state change — initial evaluation, enrichment events, AI re-evaluations, human approvals, overrides and CRM outcomes — is recorded in an append-only decision history, giving a defensible audit trail per deal.
+
+### 5. Enrichment
+On-demand company intelligence. When a deal lacks firmographic data, enrichment fills website, revenue, employee count, ownership type and transaction type — then re-runs mandate checks and the AI evaluation against the updated picture, showing before/after eligibility. Providers are pluggable: Apollo.io when configured, a clearly-labeled demo provider otherwise.
+
+### 6. CRM Handoff
+After a human decision, the effective decision routes to the CRM automatically (or manually, on demand), with provider, status, record ID and any error visible on the deal. Simulated record IDs are always labeled "Simulated" — the interface never presents a simulated handoff as a live integration.
+
+### 7. Scenario Analysis
+A what-if workspace for mandate criteria. Select a lender, adjust EBITDA floors, leverage ceilings, geography, deal size or industry rules, and see how eligibility of existing pipeline would change — newly eligible, no longer eligible, unchanged — before committing criteria changes in the real world.
+
+## Operational Workflow
+
+```
+Inbound opportunity → Company/deal enrichment → Mandate evaluation → Qualification
+    → Human review → Decision recording → CRM handoff → Pipeline intelligence
+```
+
+- **Inbound:** `POST /webhook/evaluate-deal` (external sources) or `POST /deals/simulate` (manual entry).
+- **Evaluation:** deterministic mandate checks + LLM qualitative fit → recommendation, evidence, missing info, next best action, persisted to the deal queue.
+- **Human review:** `POST /action/approve` (confirm) or `POST /action/override` (change with rationale) — both recorded in decision history.
+- **Enrichment:** `POST /deals/{deal_id}/enrich` — fills gaps, re-runs mandate checks and AI evaluation, records before/after.
+- **CRM handoff:** automatic after the human decision, or `POST /deals/{deal_id}/route-to-crm` on demand — the effective decision (override if present, otherwise the AI recommendation) determines the CRM stage.
+- **Pipeline intelligence:** `GET /analytics` plus client-computed pipeline health and follow-up prioritization.
+
+## Business Value
+
+The intended operational benefits of running this workflow:
+
+- **Reduced repetitive research** — mandate criteria and first-pass qualification are applied automatically; enrichment fills information gaps on demand instead of through ad-hoc searches.
+- **More consistent opportunity qualification** — every deal is evaluated against the same explicit criteria, with the reasoning written down.
+- **Better prioritization** — the attention queue makes the most operationally urgent work explicit and explained, rather than buried in a list.
+- **Improved pipeline visibility** — counts, distribution, source performance and bottleneck stats are always current, not assembled by hand.
+- **More traceable decisions** — approvals and overrides carry rationale into an append-only history, so any outcome can be reconstructed later.
+- **Better operational coordination** — decided work has a defined handoff to CRM, with failures visible and retryable.
+
+Indenture is a portfolio product. No customer adoption, revenue or quantified productivity outcomes are claimed.
+
+## Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| Frontend | Next.js 16, React 18, TypeScript, Tailwind CSS | Deal Operations, Pipeline Intelligence and Scenario Analysis interfaces; pipeline health computed client-side |
+| Backend | FastAPI, Python 3.11 | REST endpoints for evaluation, review, enrichment, handoff, history and analytics |
+| Database | Supabase (PostgreSQL) | `deal_queue` and `deal_history` tables |
+| AI evaluation | Groq (`openai/gpt-oss-20b`) | Qualitative fit evaluation against each lender's exclusion criteria |
+| Enrichment | Apollo.io (when configured) / Demo provider | Company intelligence: website, revenue, employees, ownership, transaction type |
+| CRM | HubSpot (when configured) | Decision-to-CRM deal creation with stage mapping |
+
+Technology serves the workflow — each piece exists because the business process needs it.
+
+## Integrations
+
+### Implemented: HubSpotAdapter (environment-gated)
+
+`backend/crm_adapter.py` implements a real HubSpot integration, enabled by environment rather than hardcoded:
+
+- When `HUBSPOT_ENABLED=true` **and** `HUBSPOT_ACCESS_TOKEN` are set, routing posts to the live HubSpot API (`api.hubapi.com`), creating a deal with the lender, deal size, EBITDA and leverage mapped to custom properties, and the effective decision mapped to a pipeline stage: ADVANCE → `appointmentscheduled`, HOLD → `qualifiedtobuy`, NURTURE → `presentationscheduled`, REJECT → `closedlost`.
+- When not configured, the adapter does not pretend to integrate: it returns a simulated record ID (`SIM-<timestamp>`), stored and surfaced honestly. The UI labels every `SIM-` record **"Simulated"**.
+
+### Implemented: ApolloEnrichmentProvider (environment-gated)
+
+`backend/enrichment_adapter.py` implements real Apollo.io company enrichment, also environment-gated:
+
+- When `APOLLO_ENABLED=true` **and** `APOLLO_API_KEY` are set, enrichment extracts the company domain from the deal's website field, applies **strict domain validation** (rejecting synthetic/test domains such as `localhost`, `test.*`, `demo.*`, `fake.*`), and returns real company data — website, revenue, employee count.
+- On failure it returns an actionable error (company not found, invalid domain, authentication, rate limit) — it **will not fake success**.
+
+### Demo behavior (default, clearly labeled)
+
+- **Demo enrichment** (`ENRICHMENT_DEMO_ENABLED=true`, default): deterministic synthetic firmographics derived from the deal and lender names, with a recorded confidence value (~0.85–0.95) and `demo` as the enrichment source. Useful for testing the full workflow without external API keys.
+- **Simulated CRM**: `SIM-<timestamp>` record IDs with no external API call, always labeled "Simulated" in the interface.
+
+### Documented roadmap (not implemented)
+
+These paths are documented in the adapter-architecture context and **must not be described as working**:
+
+- **Clay** — waterfall enrichment and pre-pipeline list building; natural entry point is a Clay table pushing qualified companies into the existing `POST /webhook/evaluate-deal` endpoint.
+- **Hightouch** — reverse-ETL activation of the Supabase `deal_queue` into downstream GTM tools.
+- **Zapier / Make** — lightweight automation around the existing REST API (e.g. alerts on `CRM_ROUTE_FAILED`, digests of opportunities awaiting review).
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        FRONTEND (Next.js 16 + React 18)        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Triage UI    │  │ Analytics    │  │ Mandate      │          │
-│  │ (HITL)       │  │ Dashboard    │  │ Sandbox      │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │ REST API
-┌──────────────────────────▼──────────────────────────────────────┐
-│                        BACKEND (FastAPI)                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
-│  │ Deal         │  │ Enrichment   │  │ CRM Adapter  │          │
-│  │ Evaluation   │  │ (Demo/Apollo)│  │ (HubSpot)    │          │
-│  └──────────────┘  └──────────────┘  └──────────────┘          │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
-   ┌─────────┐        ┌──────────┐      ┌──────────┐
-   │ Supabase│        │ Groq LLM │      │  CRM     │
-   │(Postgres)│        │(gpt-oss) │      │(HubSpot) │
-   └─────────┘        └──────────┘      └──────────┘
-```
+```mermaid
+flowchart LR
+    subgraph Clients
+        UI["Next.js Frontend<br/>Deal Ops · Pipeline Intel · Scenarios"]
+        EXT["External Deal Sources<br/>(webhook)"]
+    end
 
-### Core Components
+    subgraph Backend["FastAPI Backend"]
+        API["REST API<br/>evaluate · approve · override<br/>enrich · route-to-crm<br/>analytics · history · sandbox"]
+        SVC["Evaluation Services<br/>mandate checks + LLM fit"]
+    end
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| API | FastAPI | REST endpoints for deal evaluation, enrichment, CRM routing |
-| Database | Supabase (PostgreSQL) | `deal_queue` + `deal_history` tables |
-| LLM | Groq (gpt-oss-20b) | Qualitative fit evaluation |
-| Enrichment | Demo / Apollo.io | Company data enrichment (revenue, employees, etc.) |
-| CRM | HubSpot (simulated) | Deal routing with decision mapping |
-| Frontend | Next.js 16 + Tailwind | Triage, Analytics, Mandate Sandbox UIs |
+    subgraph Adapters
+        EA["ApolloEnrichmentProvider<br/>(env-gated)"]
+        DEMO["Demo Provider<br/>(default fallback)"]
+        HA["HubSpotAdapter<br/>(env-gated)"]
+        SIM["Simulated CRM<br/>(SIM- record IDs)"]
+    end
 
-## Core Workflow
+    DB[("Supabase PostgreSQL<br/>deal_queue · deal_history")]
+    LLM["Groq LLM<br/>openai/gpt-oss-20b"]
+    APOLLO["Apollo.io API"]
+    HUBSPOT["HubSpot API"]
 
-### 1. Inbound Deal → Mandate Checks → AI Decision
-
-```
-POST /webhook/evaluate-deal        # Webhook from external source
-POST /deals/simulate               # Manual simulation (UI)
+    EXT -->|POST /webhook/evaluate-deal| API
+    UI -->|REST| API
+    API --> SVC
+    SVC -->|qualitative fit| LLM
+    SVC --> DB
+    API <--> DB
+    API --> EA & DEMO
+    EA <--> APOLLO
+    API --> HA
+    HA <-->|when enabled| HUBSPOT
+    HA -->|when disabled| SIM
 ```
 
-- Deal evaluated against 3 lender mandates (Apollo Credit, Oak Hill, Blue Owl)
-- Deterministic checks: EBITDA ≥ min, Leverage ≤ max, Geography ∈ allowed
-- LLM evaluates qualitative fit → ADVANCE / HOLD / NURTURE / REJECT
-- Results persisted to `deal_queue` with `ai_decision`, `evidence`, `mandate_checks`
-
-### 2. Human Review
-
-```
-POST /action/approve               # Human confirms AI decision
-POST /action/override              # Human overrides with new decision + reason
-```
-
-- **Approve**: Sets `human_status=APPROVED`, `effective_decision = ai_decision`
-- **Override**: Sets `human_status=OVERRIDDEN`, `human_decision=X`, `effective_decision=X`
-- Both record `HUMAN_APPROVE` / `HUMAN_OVERRIDE` in `deal_history`
-- Both route to CRM using the **effective decision**
-
-### 3. Enrichment (On-Demand)
-
-```
-POST /deals/{id}/enrich
-```
-
-- Fetches deal from DB → calls enrichment provider (Demo or Apollo)
-- **Demo**: Deterministic synthetic data (website, revenue, employees, ownership, transaction type)
-- **Apollo**: Real company data via domain lookup (requires valid company domain)
-- On success:
-  - Updates deal with enriched fields
-  - **Re-runs mandate checks** with enriched data → stores `mandate_reevaluation` (before/after)
-  - **Re-runs AI reasoning** with enriched data → stores `ai_reevaluation` (previous→new decision)
-  - Records `ENRICHMENT_COMPLETED` / `ENRICHMENT_FAILED` in history
-  - Records `AI_REEVALUATION` in history if decision changes
-
-### 4. CRM Routing
-
-```
-POST /deals/{id}/route-to-crm      # Manual trigger (UI)
-```
-
-- Called automatically after Approve/Override
-- Uses `effective_decision` → `human_decision` → `ai_decision` priority
-- HubSpot adapter maps decisions to deal stages
-- Records `CRM_ROUTED` / `CRM_ROUTE_FAILED` in history
-- Updates `deal_queue` with `crm_status`, `crm_record_id`, `crm_error`
-
-### 5. Audit Trail
-
-```
-GET /deal/history?deal_name=X&lender_name=Y
-```
-
-Every state change recorded in `deal_history`:
-- `AI_DECISION` — initial AI evaluation
-- `ENRICHMENT_COMPLETED` / `ENRICHMENT_FAILED`
-- `AI_REEVALUATION` — decision change after enrichment
-- `HUMAN_APPROVE` — human confirmed AI decision
-- `HUMAN_OVERRIDE` — human changed decision
-- `CRM_ROUTED` / `CRM_ROUTE_FAILED`
-
-### 6. Analytics
-
-```
-GET /analytics
-```
-
-Aggregates from `deal_queue`:
-- Total deals, decision percentages (ADVANCE/HOLD/NURTURE/REJECT)
-- Average deal size
-- Deals by source with advance/reject rates
-- Source performance table
-
-### 7. Mandate Sandbox
-
-```
-POST /mandate-sandbox/simulate
-GET /mandate-sandbox/lenders
-```
-
-- Simulate mandate changes against existing deals
-- Shows: eligible before/after, newly eligible, no longer eligible, unchanged
-- Decision distribution for affected deals
-- Drill-down tables with mandate check comparisons
-
-## Data Model
-
-### `deal_queue` (key columns)
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | serial PK | |
-| `deal_name` | text | Deal identifier |
-| `lender_name` | text | Lender mandate applied |
-| `deal_size` | numeric | |
-| `industry` | text | |
-| `geography` | text | |
-| `ebitda` | numeric | |
-| `leverage` | numeric | |
-| `source` | text | simulated/webhook/referral/conference |
-| `website` | text | Optional company website for Apollo |
-| `ai_decision` | text | ADVANCE/HOLD/NURTURE/REJECT |
-| `evidence` | text | AI reasoning |
-| `email_draft` | text | Suggested outreach email |
-| `missing_info` | text | Gaps identified by AI |
-| `next_best_action` | text | Suggested next step |
-| `mandate_checks` | jsonb | {ebitda_check, leverage_check, geography_check} |
-| `human_status` | text | PENDING/APPROVED/OVERRIDDEN |
-| `human_decision` | text | Override decision if any |
-| `override_reason` | text | Rationale for override |
-| `effective_decision` | text | Final decision used for CRM |
-| `enrichment_status` | text | PENDING/ENRICHED/FAILED |
-| `enrichment_source` | text | demo/apollo |
-| `enrichment_confidence` | numeric | 0–1 |
-| `mandate_reevaluation` | jsonb | Before/after mandate comparison |
-| `ai_reevaluation` | jsonb | Previous→new AI decision + reasoning |
-| `crm_provider` | text | hubspot |
-| `crm_status` | text | ROUTED/FAILED |
-| `crm_record_id` | text | CRM record ID |
-| `crm_error` | text | Error if failed |
-| `created_at` | timestamptz | |
-
-### `deal_history`
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `deal_queue_id` | int FK | References deal_queue |
-| `event_type` | text | AI_DECISION, ENRICHMENT_*, AI_REEVALUATION, HUMAN_*, CRM_* |
-| `previous_decision` | text | |
-| `new_decision` | text | |
-| `reason` | text | Human-readable explanation |
-
-## Enrichment Providers
-
-### Demo Provider (default, enabled)
-- Deterministic synthetic data based on deal_name + lender_name hash
-- Always succeeds with confidence ~0.85–0.95
-- Fields: website, revenue, employee_count, ownership_type, transaction_type
-- **Use for testing without API keys**
-
-### Apollo.io Provider (optional)
-- Requires `APOLLO_ENABLED=true` and `APOLLO_API_KEY`
-- Extracts domain from `deal.website` field
-- **Strict domain validation** — rejects synthetic/test domains (localhost, test.*, demo.*, fake.*, etc.)
-- Returns real company data: revenue, employee_count, website
-- On failure: clear error (404 not found, 422 invalid domain, 401 auth, 429 rate limit)
-- **Will not fake success** — if no valid domain, returns actionable error
-
-## CRM Integration
-
-### HubSpot Adapter
-- Enabled via `HUBSPOT_ENABLED=true` + `HUBSPOT_ACCESS_TOKEN`
-- Maps decisions to deal stages:
-  - ADVANCE → appointmentscheduled
-  - HOLD → qualifiedtobuy
-  - NURTURE → presentationscheduled
-  - REJECT → closedlost
-- Creates deal with custom properties (lender, EBITDA, leverage, etc.)
-- **Simulated mode** (default): Returns `SIM-<timestamp>` record ID, no API call
-
-### Attio (legacy)
-- Original `push_to_crm` endpoint, kept for reference
-- Not used in current workflow
-
-## Decision Semantics
-
-| Decision | Meaning | CRM Stage |
-|----------|---------|-----------|
-| **ADVANCE** | Strong fit, no issues — move forward | appointmentscheduled |
-| **HOLD** | Potentially viable but missing critical info | qualifiedtobuy |
-| **NURTURE** | Not suitable now, could become suitable later (too small, early stage) | presentationscheduled |
-| **REJECT** | Clearly outside mandate or violates exclusion | closedlost |
-
-**HOLD ≠ NURTURE** — HOLD = "need more data", NURTURE = "not now, maybe later"
+The frontend talks to the backend REST API (CORS allow-listed) and reads pipeline data directly from Supabase. The backend owns all writes and external calls. External integrations are behind environment-gated adapters with labeled fallbacks — the workflow runs end-to-end whether or not third-party credentials are present.
 
 ## Setup
 
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+
-- Supabase project (PostgreSQL)
-- Groq API key
+- A Supabase project (PostgreSQL)
+- A Groq API key
 - Optional: Apollo API key, HubSpot access token
+
+### Database (Supabase)
+
+Run `supabase/schema.sql` in the Supabase SQL editor. It creates the `deal_queue` and `deal_history` tables plus indexes.
 
 ### Backend (Local Development)
 
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your keys
+cp .env.example .env            # then edit .env with your keys
 python -m uvicorn main:app --reload --port 8000
 ```
 
-### Database (Supabase)
+Backend environment variables (see `backend/.env.example`):
 
-Run `supabase/schema.sql` in Supabase SQL editor to create:
-- `deal_queue` table
-- `deal_history` table
-- Indexes
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GROQ_API_KEY` | Yes | Groq API key for LLM evaluation |
+| `SUPABASE_URL` | Yes | `https://your-project.supabase.co` |
+| `SUPABASE_KEY` | Yes | Service role or anon key |
+| `BACKEND_CORS_ORIGINS` | No | Comma-separated allowed origins (default: `https://indenture-snowy.vercel.app,http://localhost:3000`) |
+| `HUBSPOT_ENABLED` | No | `"true"` to enable live HubSpot routing |
+| `HUBSPOT_ACCESS_TOKEN` | If HubSpot enabled | HubSpot private-app token |
+| `ENRICHMENT_DEMO_ENABLED` | No | `"true"` (default) enables the demo enrichment fallback |
+| `APOLLO_ENABLED` | No | `"true"` to enable Apollo enrichment |
+| `APOLLO_API_KEY` | If Apollo enabled | Apollo.io API key |
+| `PORT` | No | Server port (default `8000`) |
 
 ### Frontend (Local Development)
 
@@ -276,232 +213,24 @@ npm install
 npm run dev
 ```
 
----
+### Production Deployment
 
-## Production Deployment
+- **Backend:** Render web service, root directory `backend`, build `pip install -r requirements.txt`, start `python main.py` (binds to `0.0.0.0:PORT`).
+- **Frontend:** Vercel, with the three `NEXT_PUBLIC_*` variables set.
+- **Database:** the same Supabase project, with `BACKEND_CORS_ORIGINS` including the production frontend URL.
 
-### Architecture Overview
+## Limitations
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   Vercel        │────▶│   Render        │────▶│   Supabase      │
-│   (Frontend)    │     │   (Backend)     │     │   (Database)    │
-└─────────────────┘     └────────┬────────┘     └─────────────────┘
-                                 │
-                    ┌────────────┼────────────┐
-                    ▼            ▼            ▼
-               ┌─────────┐  ┌──────────┐  ┌──────────┐
-               │  Groq   │  │ Apollo   │  │ HubSpot  │
-               │  (LLM)  │  │(Enrich)  │  │  (CRM)   │
-               └─────────┘  └──────────┘  └──────────┘
-```
+- **Integrations require credentials.** Apollo and HubSpot are implemented but inert until their environment variables are configured with real API keys.
+- **Simulated CRM behavior when not configured.** Without HubSpot credentials, handoffs produce `SIM-<timestamp>` record IDs labeled "Simulated" — by design, and never presented as a live integration.
+- **Demo enrichment fallback.** Without Apollo credentials, enrichment uses a deterministic demo provider that produces synthetic firmographics, clearly labeled with the `demo` source.
+- **No verified external adoption.** Indenture is a portfolio product. There are no customer deployments, paying users, or measured business outcomes behind the claims in this README — the business value section describes intended benefits of the workflow, not measured results.
+- **Single-tenant pipeline.** The deal queue is a shared pipeline without per-user authentication or role-based access.
 
-### Backend Deployment (Render)
+## Documentation
 
-1. **Create a new Web Service on Render**
-   - Connect your GitHub repository
-   - Root Directory: `backend`
-   - Runtime: Python 3.11+
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `python main.py` (uses PORT env var automatically)
-
-2. **Configure Environment Variables on Render**
-   | Variable | Required | Description |
-   |----------|----------|-------------|
-   | `GROQ_API_KEY` | Yes | Groq API key for LLM |
-   | `SUPABASE_URL` | Yes | `https://your-project.supabase.co` |
-   | `SUPABASE_KEY` | Yes | Service role or anon key |
-   | `BACKEND_CORS_ORIGINS` | Yes | Production Vercel URL (e.g., `https://your-app.vercel.app`) |
-   | `APOLLO_ENABLED` | No | `"true"` to enable Apollo enrichment |
-   | `APOLLO_API_KEY` | If Apollo enabled | Apollo.io API key |
-   | `ENRICHMENT_DEMO_ENABLED` | No | `"true"` (default) for demo provider |
-   | `HUBSPOT_ENABLED` | No | `"true"` to enable HubSpot CRM |
-   | `HUBSPOT_ACCESS_TOKEN` | If HubSpot enabled | HubSpot private app token |
-   | `PORT` | No | Render sets automatically (default 8000) |
-
-3. **Important Notes**
-   - The backend binds to `0.0.0.0` and reads `PORT` from environment (set by Render)
-   - `BACKEND_CORS_ORIGINS` must include your Vercel frontend URL (comma-separated for multiple)
-   - HubSpot runs in **simulated mode** by default (`HUBSPOT_ENABLED=false`)
-   - Apollo requires valid real company domains; demo provider used as fallback
-
-### Frontend Deployment (Vercel)
-
-1. **Create a new Vercel Project**
-   - Import your GitHub repository
-   - Framework Preset: Next.js
-   - Root Directory: `frontend`
-   - Build Command: `npm run build` (default)
-   - Output Directory: `.next` (default)
-
-2. **Configure Environment Variables on Vercel**
-   | Variable | Required | Description |
-   |----------|----------|-------------|
-   | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-   | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
-   | `NEXT_PUBLIC_API_URL` | Yes | Deployed Render backend URL (e.g., `https://your-backend.onrender.com`) |
-
-3. **Important Notes**
-   - `NEXT_PUBLIC_API_URL` must point to your Render backend (no trailing slash)
-   - Frontend uses Supabase directly for real-time data; API calls go to Render backend
-   - No build-time secrets needed; all `NEXT_PUBLIC_*` vars are client-safe
-
-### Supabase Setup (Production)
-
-1. Create a new Supabase project (or use existing)
-2. Run `supabase/schema.sql` in the SQL Editor
-3. Enable Row Level Security if needed (currently open for demo)
-4. Get Project URL and anon key from Settings → API
-5. Add these to both Render (backend) and Vercel (frontend) environment variables
-
-### Safe Simulated HubSpot Mode
-
-- **Default**: `HUBSPOT_ENABLED=false` — no real API calls, returns `SIM-<timestamp>` record IDs
-- **Real mode**: Set `HUBSPOT_ENABLED=true` and provide `HUBSPOT_ACCESS_TOKEN` (HubSpot Private App token with `crm.objects.deals.write` scope)
-- Simulated mode is safe for public demos — no external credentials required
-- Real HubSpot routing has **not been tested in production**; enable at your own risk
-
-### Optional Real Apollo/HubSpot Configuration
-
-**Apollo Enrichment:**
-- Set `APOLLO_ENABLED=true` and `APOLLO_API_KEY` on Render
-- Requires valid company website with real domain (e.g., `https://stripe.com`)
-- Strict domain validation rejects: `localhost`, `test.*`, `demo.*`, `fake.*`, synthetic domains
-- Falls back to demo provider if disabled or domain invalid
-
-**HubSpot CRM:**
-- Set `HUBSPOT_ENABLED=true` and `HUBSPOT_ACCESS_TOKEN` on Render
-- Creates deals with custom properties: `indenture_lender`, `indenture_ebitda`, etc.
-- Maps decisions to stages: ADVANCE→appointmentscheduled, HOLD→qualifiedtobuy, NURTURE→presentationscheduled, REJECT→closedlost
-
-### Demo Workflow (Production)
-
-1. Open your Vercel frontend URL
-2. Click **+ Simulate** → fill Deal Name, Context, optional financials + website
-3. Deal appears in queue with AI decision (ADVANCE/HOLD/NURTURE/REJECT)
-4. Click deal → inspect mandate checks, evidence, email draft, missing info
-5. **Enrich Deal** → demo provider adds synthetic data; Apollo adds real data if configured
-6. Observe Mandate Re-evaluation and AI Re-evaluation panels
-7. **Approve & Advance** → confirms AI decision, routes to CRM (simulated by default)
-8. **Override** → choose new decision + reason, routes to CRM with overridden decision
-9. Visit `/analytics` for aggregated metrics and deal log
-10. Visit `/sandbox` to simulate mandate changes against historical deals
-
-### Environment Variables
-
-**Backend (.env)**
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GROQ_API_KEY` | Yes | Groq API key for LLM |
-| `SUPABASE_URL` | Yes | https://your-project.supabase.co |
-| `SUPABASE_KEY` | Yes | Service role or anon key |
-| `BACKEND_CORS_ORIGINS` | No | Default: http://localhost:3000 |
-| `APOLLO_ENABLED` | No | "true" to enable Apollo |
-| `APOLLO_API_KEY` | If Apollo enabled | Apollo.io API key |
-| `ENRICHMENT_DEMO_ENABLED` | No | "true" (default) for demo provider |
-| `HUBSPOT_ENABLED` | No | "true" to enable HubSpot |
-| `HUBSPOT_ACCESS_TOKEN` | If HubSpot enabled | HubSpot private app token |
-| `PORT` | No | Default: 8000 (Render sets automatically) |
-
-**Frontend (.env.local)**
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key |
-| `NEXT_PUBLIC_API_URL` | No | Default: http://localhost:8000 |
-
-## Demo Instructions
-
-### Quick Start (Demo Mode)
-1. Start backend: `cd backend && source venv/bin/activate && python -m uvicorn main:app --reload`
-2. Start frontend: `cd frontend && npm run dev`
-3. Open http://localhost:3000
-
-### Simulate a Deal
-1. Click **+ Simulate** in Triage
-2. Fill: Deal Name, Context (required), optional financials + website
-3. Submit → Deal appears in queue with AI decision
-4. Click deal to inspect: mandate checks, evidence, email draft, missing info
-
-### Test Enrichment
-1. Select a deal → **Enrich Deal**
-2. Demo provider: Always succeeds with synthetic data
-3. With valid website (e.g., `https://stripe.com`) + Apollo enabled: Real data
-4. Observe: Mandate Re-evaluation panel, AI Re-evaluation panel, Decision History
-
-### Human Review
-- **Approve & Advance**: Confirms AI decision, routes to CRM
-- **Override**: Choose new decision + reason, routes to CRM with overridden decision
-
-### Analytics
-- Navigate to `/analytics` — overview + deal log
-
-### Mandate Sandbox
-- Navigate to `/sandbox`
-- Select lender, modify mandate parameters
-- Run simulation → see impact on historical deals
-
-## Known Limitations / Demo Notes
-
-- **Synthetic data**: Simulated deals use generated financials. No real company data unless you provide a valid website + Apollo key.
-- **Apollo validation**: Strictly rejects non-real domains. Provide a real company website (e.g., `https://stripe.com`) for Apollo to work.
-- **HubSpot**: Runs in simulated mode by default (returns `SIM-` record IDs). Enable with real token for actual CRM writes.
-- **No authentication**: This is a demo/internal tool — no auth layer.
-- **Single-tenant**: One Supabase project, one set of lenders in `backend/data.json`.
-- **LLM model**: Uses Groq's `openai/gpt-oss-20b`. Requires Groq API key.
-- **No webhook receiver**: `/webhook/evaluate-deal` reads from static `data.json` for demo purposes.
-
-## Project Structure
-
-```
-Indenture/
-├── backend/
-│   ├── main.py                 # FastAPI routes
-│   ├── services.py             # Mandate logic, AI evaluation, CRM push
-│   ├── schemas.py              # Pydantic models
-│   ├── enrichment_adapter.py   # Demo + Apollo providers
-│   ├── crm_adapter.py          # HubSpot adapter
-│   ├── data.json               # Lender mandates + sample webhook
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/
-│   ├── app/
-│   │   ├── page.tsx            # Triage (HITL command center)
-│   │   ├── analytics/page.tsx  # Analytics dashboard
-│   │   └── sandbox/page.tsx    # Mandate sandbox
-│   ├── package.json
-│   └── .env.local
-├── supabase/
-│   └── schema.sql
-└── README.md
-```
-
-## API Reference
-
-### Deal Evaluation
-- `POST /webhook/evaluate-deal` — Process webhook deal (static data)
-- `POST /deals/simulate` — Simulate inbound deal (body: SimulateDealRequest)
-
-### Actions
-- `POST /action/approve` — Approve deal (body: {deal_name, lender_name})
-- `POST /action/override` — Override decision (body: {deal_name, lender_name, human_decision, override_reason})
-
-### Enrichment
-- `POST /deals/{id}/enrich` — Enrich deal (body: {deal_name, lender_name})
-
-### CRM
-- `POST /deals/{id}/route-to-crm` — Manual CRM routing (body: {deal_name, lender_name})
-
-### Analytics
-- `GET /analytics` — Aggregated metrics
-
-### History
-- `GET /deal/history?deal_name=X&lender_name=Y` — Audit trail
-
-### Mandate Sandbox
-- `GET /mandate-sandbox/lenders` — List lenders
-- `POST /mandate-sandbox/simulate` — Simulate mandate changes
-
-## License
-
-MIT
+- [Product Case Study](docs/PRODUCT_CASE_STUDY.md) — the business problem, product decisions and trade-offs
+- [Architecture](docs/ARCHITECTURE.md) — system design and data flow, based on the actual code
+- [Demo Script](docs/DEMO_SCRIPT.md) — a 2–3 minute product walkthrough
+- [Screenshot Checklist](docs/SCREENSHOT_CHECKLIST.md) — the captures needed for the portfolio
+- [Portfolio Description](docs/PORTFOLIO_DESCRIPTION.md) — resume and LinkedIn-ready text

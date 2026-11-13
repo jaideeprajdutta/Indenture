@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Panel, Badge } from "@/components/ui";
-import { formatCurrency, getDecisionConfig } from "@/lib/utils";
+import { Panel, Badge, PanelHeader } from "@/components/ui";
+import { formatCurrency, getDecisionConfig, normalizeDecision } from "@/lib/utils";
 
 interface AnalyticsData {
   total_deals: number;
@@ -28,6 +28,153 @@ export function MetricCard({ label, value, color }: { label: string; value: stri
     <Panel variant="default" padding="md">
       <p className="text-label-xs text-muted-foreground uppercase tracking-wider font-medium mb-1">{label}</p>
       <p className={`text-heading-lg font-bold font-mono ${colorMap[color || "success"]}`}>{value}</p>
+    </Panel>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Pipeline health & follow-up prioritization                          */
+/* Computed client-side from the existing deal log — no fabricated      */
+/* metrics, no new endpoints. Every item carries the reason it is       */
+/* being surfaced.                                                     */
+/* ------------------------------------------------------------------ */
+
+export interface DealLogRow {
+  id: number;
+  deal_name: string;
+  lender_name: string;
+  deal_size: number | null;
+  source: string | null;
+  ai_decision: string;
+  human_status: string;
+  human_decision: string | null;
+  missing_info: string | null;
+  next_best_action: string | null;
+  crm_status: string | null;
+  crm_error: string | null;
+  created_at: string;
+}
+
+const DAY_MS = 86_400_000;
+const severityRank = { high: 0, medium: 1, low: 2 } as const;
+const severityStyles = {
+  high: { dot: "bg-danger", label: "text-danger" },
+  medium: { dot: "bg-warning", label: "text-warning" },
+  low: { dot: "bg-info", label: "text-info" },
+} as const;
+
+interface AttentionItem {
+  deal: DealLogRow;
+  reason: string;
+  severity: keyof typeof severityRank;
+  ageDays: number;
+}
+
+export function PipelineHealth({ deals }: { deals: DealLogRow[] }) {
+  // Captured once at mount so re-renders don't shift the "days waiting" figures.
+  const [now] = React.useState(() => Date.now());
+  const ageDays = (d: DealLogRow) =>
+    Math.max(0, Math.floor((now - new Date(d.created_at).getTime()) / DAY_MS));
+
+  const pending = deals.filter((d) => (d.human_status || "PENDING") === "PENDING");
+  const stuckReview = pending.filter((d) => ageDays(d) >= 7);
+  const decided = deals.filter((d) => d.human_status === "APPROVED" || d.human_status === "OVERRIDDEN");
+  const awaitingHandoff = decided.filter(
+    (d) => !d.crm_status && normalizeDecision(d.ai_decision) !== "REJECT"
+  );
+  const handoffFailed = deals.filter((d) => d.crm_status === "FAILED");
+  const holdPending = pending.filter((d) => normalizeDecision(d.ai_decision) === "HOLD");
+
+  /* Follow-up prioritization: failed handoffs first (broken work), then
+     decisions waiting on their handoff, then stale reviews, then HOLDs
+     blocked on missing information. Oldest first within a tier. */
+  const attention: AttentionItem[] = [];
+  const seen = new Set<number>();
+  const push = (deal: DealLogRow, reason: string, severity: AttentionItem["severity"]) => {
+    if (seen.has(deal.id)) return;
+    seen.add(deal.id);
+    attention.push({ deal, reason, severity, ageDays: ageDays(deal) });
+  };
+
+  for (const d of handoffFailed) {
+    push(d, d.crm_error ? `CRM handoff failed — ${d.crm_error}` : "CRM handoff failed — needs retry", "high");
+  }
+  for (const d of awaitingHandoff) {
+    push(d, `Decision made (${d.human_status.toLowerCase()}) — pending CRM handoff`, "medium");
+  }
+  for (const d of stuckReview) {
+    push(d, `Awaiting review for ${ageDays(d)} days`, ageDays(d) >= 14 ? "high" : "medium");
+  }
+  for (const d of holdPending) {
+    const info = d.missing_info && d.missing_info.trim() ? `Missing: ${d.missing_info.trim()}` : "Missing information blocking progress";
+    push(d, `AI recommends HOLD — ${info}`, "low");
+  }
+
+  attention.sort(
+    (a, b) => severityRank[a.severity] - severityRank[b.severity] || b.ageDays - a.ageDays
+  );
+  const visible = attention.slice(0, 5);
+  const remaining = attention.length - visible.length;
+
+  return (
+    <Panel variant="default" padding="md">
+      <PanelHeader
+        title="Pipeline Health"
+        description="Bottlenecks and outstanding work, prioritized by operational impact"
+      />
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div>
+          <p className="text-heading-md font-mono font-bold text-warning">{stuckReview.length}</p>
+          <p className="text-label-xs text-muted-foreground">Stuck in review (7d+)</p>
+        </div>
+        <div>
+          <p className="text-heading-md font-mono font-bold text-info">{awaitingHandoff.length}</p>
+          <p className="text-label-xs text-muted-foreground">Awaiting CRM handoff</p>
+        </div>
+        <div>
+          <p className="text-heading-md font-mono font-bold text-danger">{handoffFailed.length}</p>
+          <p className="text-label-xs text-muted-foreground">Handoff failures</p>
+        </div>
+        <div>
+          <p className="text-heading-md font-mono font-bold text-warning">{holdPending.length}</p>
+          <p className="text-label-xs text-muted-foreground">HOLD — info missing</p>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-border">
+        <h4 className="text-label-xs text-muted-foreground uppercase tracking-wider mb-3">
+          Needs attention first
+        </h4>
+        {visible.length === 0 ? (
+          <p className="text-body-sm text-muted-foreground py-2">
+            No operational bottlenecks — every decision has a clear next step.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {visible.map(({ deal, reason, severity }) => {
+              const styles = severityStyles[severity];
+              return (
+                <li key={deal.id} className="flex items-start gap-3 py-2.5">
+                  <span className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${styles.dot}`} aria-hidden="true" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body-sm font-medium text-foreground truncate">{deal.deal_name}</p>
+                    <p className={`text-label-xs ${styles.label}`}>{reason}</p>
+                  </div>
+                  <span className="flex-shrink-0 text-label-xs text-muted-foreground font-mono">
+                    {deal.lender_name} · {ageDays(deal)}d
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {remaining > 0 && (
+          <p className="mt-2 text-label-xs text-muted-foreground">
+            + {remaining} more item{remaining === 1 ? "" : "s"} not shown
+          </p>
+        )}
+      </div>
     </Panel>
   );
 }
@@ -83,7 +230,7 @@ export function SourceBars({ analytics }: { analytics: AnalyticsData }) {
   if (sources.length === 0) {
     return (
       <Panel variant="default" padding="md">
-        <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider mb-3">Deals by Source</h3>
+        <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider mb-3">Opportunities by Source</h3>
         <p className="text-muted-foreground text-body-sm text-center py-6">No source data available</p>
       </Panel>
     );
@@ -91,7 +238,7 @@ export function SourceBars({ analytics }: { analytics: AnalyticsData }) {
 
   return (
     <Panel variant="default" padding="md">
-      <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider mb-3">Deals by Source</h3>
+      <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider mb-3">Opportunities by Source</h3>
       <div className="space-y-3">
         {sources.map(([source, count]) => {
           const advanced = analytics.advanced_by_source[source] || 0;
@@ -100,7 +247,7 @@ export function SourceBars({ analytics }: { analytics: AnalyticsData }) {
             <div key={source} className="space-y-1">
               <div className="flex justify-between text-body-sm">
                 <span className="font-medium text-foreground capitalize">{source}</span>
-                <span className="font-mono text-muted-foreground">{count} deals</span>
+                <span className="font-mono text-muted-foreground">{count} opportunities</span>
               </div>
               <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden">
                 <div
@@ -197,29 +344,18 @@ export function SourceTable({ analytics, deals }: { analytics: AnalyticsData; de
   );
 }
 
-interface DealLogRow {
-  id: number;
-  deal_name: string;
-  lender_name: string;
-  ai_decision: string;
-  deal_size: number | null;
-  source: string | null;
-  human_status: string;
-  created_at: string;
-}
-
 export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
   if (deals.length === 0) {
     return (
       <Panel variant="default" padding="none">
         <div className="px-4 py-3 border-b border-border">
           <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            All Deals
+            All Opportunities
             <span className="text-label-xs text-muted-foreground font-mono">{deals.length} records</span>
           </h3>
         </div>
         <div className="p-8 text-center">
-          <p className="text-muted-foreground text-body-sm">No deals recorded yet</p>
+          <p className="text-muted-foreground text-body-sm">No opportunities recorded yet</p>
         </div>
       </Panel>
     );
@@ -229,7 +365,7 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
     <Panel variant="default" padding="none">
       <div className="px-4 py-3 border-b border-border">
         <h3 className="text-label-sm text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-          <span>All Deals</span>
+          <span>All Opportunities</span>
           <span className="text-label-xs text-muted-foreground font-mono">{deals.length} records</span>
         </h3>
       </div>
@@ -250,11 +386,11 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
             {deals.map((deal) => {
               const config = getDecisionConfig(deal.ai_decision);
               const statusConfig = {
-                APPROVED: { bg: "bg-success-muted", border: "border-success/30", text: "text-success" },
-                OVERRIDDEN: { bg: "bg-info-muted", border: "border-info/30", text: "text-info" },
-                REJECTED: { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger" },
-                PENDING: { bg: "bg-muted", border: "border-border", text: "text-muted-foreground" },
-              }[deal.human_status] || { bg: "bg-muted", border: "border-border", text: "text-muted-foreground" };
+                APPROVED: { bg: "bg-success-muted", border: "border-success/30", text: "text-success", label: "Approved" },
+                OVERRIDDEN: { bg: "bg-info-muted", border: "border-info/30", text: "text-info", label: "Overridden" },
+                REJECTED: { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger", label: "Rejected" },
+                PENDING: { bg: "bg-muted", border: "border-border", text: "text-muted-foreground", label: "Awaiting review" },
+              }[deal.human_status] || { bg: "bg-muted", border: "border-border", text: "text-muted-foreground", label: deal.human_status };
 
               return (
                 <tr key={deal.id} className="border-b border-border/50 hover:bg-surface-elevated/50">
@@ -269,7 +405,7 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
                   <td className="px-4 py-2.5 text-muted-foreground capitalize text-body-sm whitespace-nowrap">{deal.source}</td>
                   <td className="px-4 py-2.5 whitespace-nowrap">
                     <Badge variant="default" className={`${statusConfig.bg} ${statusConfig.border} ${statusConfig.text}`} size="sm">
-                      {deal.human_status}
+                      {statusConfig.label}
                     </Badge>
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground font-mono text-label-xs whitespace-nowrap">{new Date(deal.created_at).toLocaleDateString()}</td>
