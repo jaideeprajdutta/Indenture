@@ -126,9 +126,9 @@ export default function AnalyticsPage() {
       <PageShell>
         <PageContent className="flex items-center justify-center h-[calc(100vh-140px)]">
           <div className="animate-pulse flex gap-3">
-            <div className="w-6 h-6 bg-surface-elevated rounded" />
-            <div className="w-6 h-6 bg-surface-elevated rounded" />
-            <div className="w-6 h-6 bg-surface-elevated rounded" />
+            <div className="w-6 h-6 bg-muted rounded-full" />
+            <div className="w-6 h-6 bg-muted rounded-full" />
+            <div className="w-6 h-6 bg-muted rounded-full" />
           </div>
         </PageContent>
       </PageShell>

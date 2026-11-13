@@ -67,7 +67,7 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
     const modalContent = (
       <Fragment>
         <div
-          className="fixed inset-0 bg-black/60 z-[999] animate-in"
+          className="fixed inset-0 bg-foreground/40 backdrop-blur-[2px] z-[999] animate-in"
           onClick={closeOnOverlayClick ? onClose : undefined}
           aria-hidden="true"
         />
@@ -84,14 +84,14 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
         >
           <div
             className={`
-              w-full ${sizeStyles[size]} bg-surface border border-border rounded-xl
-              shadow-xl overflow-hidden
+              w-full ${sizeStyles[size]} bg-surface-elevated border border-border rounded-xl
+              shadow-lg overflow-hidden
               max-h-[90vh] max-h-[calc(100vh-2rem)] flex flex-col
             `}
             onClick={(e) => e.stopPropagation()}
           >
             {(title || showCloseButton) && (
-              <div className="flex items-start justify-between gap-4 p-4 border-b border-border flex-shrink-0">
+              <div className="flex items-start justify-between gap-4 p-5 border-b border-border flex-shrink-0">
                 <div className="flex-1 min-w-0">
                   {title && (
                     <h2 id="modal-title" className="text-heading-md text-foreground">
@@ -115,7 +115,7 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
                 )}
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 overflow-y-auto p-5">
               {children}
             </div>
           </div>

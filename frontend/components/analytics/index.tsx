@@ -250,9 +250,9 @@ export function DealLogTable({ deals }: { deals: DealLogRow[] }) {
             {deals.map((deal) => {
               const config = getDecisionConfig(deal.ai_decision);
               const statusConfig = {
-                APPROVED: { bg: "bg-success-muted", border: "border-success/30", text: "text-success-foreground" },
-                OVERRIDDEN: { bg: "bg-info-muted", border: "border-info/30", text: "text-info-foreground" },
-                REJECTED: { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger-foreground" },
+                APPROVED: { bg: "bg-success-muted", border: "border-success/30", text: "text-success" },
+                OVERRIDDEN: { bg: "bg-info-muted", border: "border-info/30", text: "text-info" },
+                REJECTED: { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger" },
                 PENDING: { bg: "bg-muted", border: "border-border", text: "text-muted-foreground" },
               }[deal.human_status] || { bg: "bg-muted", border: "border-border", text: "text-muted-foreground" };
 

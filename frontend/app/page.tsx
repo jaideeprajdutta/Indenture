@@ -286,7 +286,7 @@ export default function IndentureCommandCenter() {
         />
         <div className="flex items-center gap-2">
           <Button
-            variant="success"
+            variant="primary"
             size="sm"
             icon={<Plus className="w-3.5 h-3.5" />}
             onClick={openSimulation}
@@ -530,7 +530,7 @@ export default function IndentureCommandCenter() {
               Cancel
             </Button>
             <Button
-              variant="success"
+              variant="primary"
               onClick={handleSimulationSubmit}
               disabled={isSimulating || !simulationState.form.deal_name.trim() || !simulationState.form.context_text.trim()}
               loading={isSimulating}

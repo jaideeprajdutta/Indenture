@@ -12,10 +12,13 @@ type PanelVariant = NonNullable<PanelProps["variant"]>;
 type PanelPadding = NonNullable<PanelProps["padding"]>;
 
 const variantStyles: Record<PanelVariant, string> = {
+  /* Lifted Cream laid on the Canvas Cream page */
   default: "bg-surface border border-border",
+  /* White — paper laid on paper */
   elevated: "bg-surface-elevated border border-border",
+  /* Soft Bone — utility subregions */
   sunken: "bg-surface-sunken border border-border",
-  bordered: "bg-transparent border border-border-strong",
+  bordered: "bg-surface-elevated border border-border-strong",
 };
 
 const paddingStyles: Record<PanelPadding, string> = {
@@ -65,12 +68,18 @@ export const PanelHeader = forwardRef<HTMLDivElement, PanelHeaderProps>(
         `}
         {...props}
       >
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          {icon && <span className="flex-shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span>}
+        <div className="flex items-start gap-2.5 flex-1 min-w-0">
+          {icon ? (
+            <span className="flex-shrink-0 text-muted-foreground mt-0.5" aria-hidden="true">{icon}</span>
+          ) : (
+            <span className="flex-shrink-0 w-[5px] h-[5px] rounded-full bg-accent mt-[5px]" aria-hidden="true" />
+          )}
           <div>
-            <h3 className="text-heading-sm text-foreground truncate">{title}</h3>
+            <h3 className="text-label-xs font-bold uppercase tracking-[0.04em] text-muted-foreground truncate">
+              {title}
+            </h3>
             {description && (
-              <p className="text-body-sm text-muted-foreground mt-1">{description}</p>
+              <p className="text-body-sm text-foreground mt-1">{description}</p>
             )}
           </div>
         </div>

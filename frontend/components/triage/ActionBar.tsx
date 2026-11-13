@@ -94,9 +94,9 @@ export function HumanStatus({ deal, className = "" }: HumanStatusProps) {
 
   const status = deal.human_status;
   const config = {
-    APPROVED: { bg: "bg-success-muted", border: "border-success/30", text: "text-success-foreground", label: "APPROVED" },
-    OVERRIDDEN: { bg: "bg-info-muted", border: "border-info/30", text: "text-info-foreground", label: "OVERRIDDEN" },
-    REJECTED: { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger-foreground", label: "REJECTED" },
+    APPROVED: { bg: "bg-success-muted", border: "border-success/30", text: "text-success", label: "APPROVED" },
+    OVERRIDDEN: { bg: "bg-info-muted", border: "border-info/30", text: "text-info", label: "OVERRIDDEN" },
+    REJECTED: { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger", label: "REJECTED" },
   }[status] || { bg: "bg-muted", border: "border-border", text: "text-muted-foreground", label: status };
 
   return (

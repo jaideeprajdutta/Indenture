@@ -15,12 +15,14 @@ type ButtonVariant = NonNullable<ButtonProps["variant"]>;
 type ButtonSize = NonNullable<ButtonProps["size"]>;
 
 const variantStyles: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary/90 shadow-sm shadow-black/20",
-  secondary: "bg-surface-elevated text-foreground border border-border hover:bg-surface hover:border-border-strong active:bg-surface-sunken",
-  ghost: "bg-transparent text-foreground hover:bg-surface-elevated active:bg-surface",
-  danger: "bg-danger text-danger-foreground hover:bg-danger-hover active:bg-danger/90 shadow-sm shadow-black/20",
-  success: "bg-success text-success-foreground hover:bg-success-hover active:bg-success/90 shadow-sm shadow-black/20",
-  outline: "bg-transparent text-foreground border border-border hover:bg-surface-elevated hover:border-border-strong active:bg-surface",
+  /* Ink Pill: Ink Black fill, Canvas Cream text, crisp same-color edge */
+  primary: "bg-primary text-primary-foreground border-[1.5px] border-primary hover:bg-primary-hover hover:border-primary-hover active:bg-primary/90",
+  /* Outlined Pill: White fill, Ink text, 1.5px ink outline */
+  secondary: "bg-surface-elevated text-foreground border-[1.5px] border-foreground/30 hover:border-foreground active:bg-surface-sunken",
+  ghost: "bg-transparent text-foreground hover:bg-foreground/5 active:bg-foreground/10",
+  danger: "bg-danger text-danger-foreground border-[1.5px] border-danger hover:bg-danger-hover hover:border-danger-hover active:bg-danger/90",
+  success: "bg-success text-success-foreground border-[1.5px] border-success hover:bg-success-hover hover:border-success-hover active:bg-success/90",
+  outline: "bg-transparent text-foreground border-[1.5px] border-foreground/30 hover:border-foreground hover:bg-foreground/5 active:bg-foreground/10",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

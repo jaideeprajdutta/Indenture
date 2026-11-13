@@ -80,28 +80,28 @@ export function getDecisionConfig(decision: string | null | undefined): Decision
       return {
         bg: "bg-success-muted",
         border: "border-success/30",
-        text: "text-success-foreground",
+        text: "text-success",
         dot: "bg-success",
       };
     case "HOLD":
       return {
         bg: "bg-warning-muted",
         border: "border-warning/30",
-        text: "text-warning-foreground",
+        text: "text-warning",
         dot: "bg-warning",
       };
     case "NURTURE":
       return {
         bg: "bg-info-muted",
         border: "border-info/30",
-        text: "text-info-foreground",
+        text: "text-info",
         dot: "bg-info",
       };
     case "REJECT":
       return {
         bg: "bg-danger-muted",
         border: "border-danger/30",
-        text: "text-danger-foreground",
+        text: "text-danger",
         dot: "bg-danger",
       };
     default:
@@ -127,21 +127,21 @@ export function getHumanStatusConfig(status: string | null | undefined): Decisio
       return {
         bg: "bg-success-muted",
         border: "border-success/30",
-        text: "text-success-foreground",
+        text: "text-success",
         dot: "bg-success",
       };
     case "OVERRIDDEN":
       return {
         bg: "bg-info-muted",
         border: "border-info/30",
-        text: "text-info-foreground",
+        text: "text-info",
         dot: "bg-info",
       };
     case "REJECTED":
       return {
         bg: "bg-danger-muted",
         border: "border-danger/30",
-        text: "text-danger-foreground",
+        text: "text-danger",
         dot: "bg-danger",
       };
     default:

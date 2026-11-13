@@ -15,10 +15,10 @@ type BadgeSize = NonNullable<BadgeProps["size"]>;
 
 const variantStyles: Record<BadgeVariant, string> = {
   default: "bg-muted text-muted-foreground border border-border",
-  success: "bg-success-muted text-success-foreground border border-success/30",
-  warning: "bg-warning-muted text-warning-foreground border border-warning/30",
-  danger: "bg-danger-muted text-danger-foreground border border-danger/30",
-  info: "bg-info-muted text-info-foreground border border-info/30",
+  success: "bg-success-muted text-success border border-success/30",
+  warning: "bg-warning-muted text-warning border border-warning/30",
+  danger: "bg-danger-muted text-danger border border-danger/30",
+  info: "bg-info-muted text-info border border-info/30",
   neutral: "bg-surface-elevated text-foreground border border-border",
 };
 

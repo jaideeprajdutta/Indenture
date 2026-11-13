@@ -18,8 +18,8 @@ export function CRMPanel({ deal, className = "" }: CRMPanelProps) {
 
   const isRouted = deal.crm_status === "ROUTED";
   const statusConfig = isRouted
-    ? { bg: "bg-success-muted", border: "border-success/30", text: "text-success-foreground", label: deal.crm_record_id?.startsWith("SIM-") ? "Simulated" : "Routed" }
-    : { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger-foreground", label: "Failed" };
+    ? { bg: "bg-success-muted", border: "border-success/30", text: "text-success", label: deal.crm_record_id?.startsWith("SIM-") ? "Simulated" : "Routed" }
+    : { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger", label: "Failed" };
 
   return (
     <Panel variant="default" padding="md" className={className}>
@@ -81,8 +81,8 @@ export function EnrichmentPanel({ deal, className = "" }: EnrichmentPanelProps) 
 
   const isEnriched = deal.enrichment_status === "ENRICHED";
   const statusConfig = isEnriched
-    ? { bg: "bg-success-muted", border: "border-success/30", text: "text-success-foreground", label: "Enriched" }
-    : { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger-foreground", label: "Failed" };
+    ? { bg: "bg-success-muted", border: "border-success/30", text: "text-success", label: "Enriched" }
+    : { bg: "bg-danger-muted", border: "border-danger/30", text: "text-danger", label: "Failed" };
 
   return (
     <Panel variant="default" padding="md" className={className}>

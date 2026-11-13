@@ -20,14 +20,14 @@ export interface TabsProps {
 }
 
 const variantStyles = {
-  default: "bg-surface border border-border rounded-lg p-1",
+  default: "bg-surface border border-border rounded-full p-1",
   pills: "bg-transparent",
   underline: "bg-transparent border-b border-border",
 };
 
 const tabStyles = {
-  default: "rounded-md px-3 py-1.5 text-label-sm font-medium transition-all duration-150 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
-  pills: "rounded-lg px-4 py-2 text-label-md font-medium transition-all duration-150 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
+  default: "rounded-full px-3 py-1.5 text-label-sm font-medium transition-all duration-150 data-[state=active]:bg-surface-elevated data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+  pills: "rounded-full px-4 py-2 text-label-md font-medium transition-all duration-150 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground",
   underline: "px-4 py-3 text-label-md font-medium border-b-2 transition-all duration-150 data-[state=active]:border-primary data-[state=active]:text-foreground border-transparent text-muted-foreground",
 };
 
