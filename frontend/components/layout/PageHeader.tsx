@@ -49,7 +49,7 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
             rounded-full
             shadow-[0_4px_24px_0_rgba(0,0,0,0.04)]
             px-4 py-2 sm:px-6
-            flex flex-wrap items-center justify-between gap-2
+            flex flex-wrap items-center justify-between gap-x-4 gap-y-2
           "
         >
           <div className="flex items-center gap-2.5 min-w-0">
@@ -68,18 +68,18 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
                   className="text-heading-lg text-foreground tracking-tight hover:text-foreground/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-full"
                   aria-label="Indenture home"
                 >
-                  <h1 className="text-heading-lg text-inherit leading-none py-1">INDENTURE</h1>
+                  <h1 className="text-heading-lg text-inherit leading-none py-0">INDENTURE</h1>
                 </Link>
               ) : (
                 <>
-                  <h1 className="text-heading-lg text-foreground leading-none py-1">{title}</h1>
+                  <h1 className="text-heading-lg text-foreground leading-none py-0">{title}</h1>
                   {subtitle && (
-                    <p className="text-body-sm text-muted-foreground mt-0.5">{subtitle}</p>
+                    <p className="text-body-sm text-muted-foreground mt-0.5 mb-0">{subtitle}</p>
                   )}
                 </>
               )}
               {isBrand && subtitle && (
-                <p className="text-body-sm text-muted-foreground mt-0.5">{subtitle}</p>
+                <p className="text-body-sm text-muted-foreground mt-0.5 mb-0">{subtitle}</p>
               )}
             </div>
           </div>
@@ -91,10 +91,10 @@ export const PageHeader = forwardRef<HTMLDivElement, PageHeaderProps>(
                     key={item.href}
                     href={item.href}
                     className={`
-                      flex items-center gap-1.5 px-3.5 py-1.5 rounded-full
+                      flex items-center gap-1.5 px-3.5 py-1 rounded-full
                       text-label-sm font-medium transition-colors duration-150
                       ${item.active
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-muted text-primary"
                         : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
                       }
                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary
